@@ -15,6 +15,8 @@ type RowItemProps = {
   seeAll: boolean;
   data: Anime[] | undefined;
   category?: BrowseCategory;
+  /** When provided, "View all" navigates to the static list screen with this data */
+  staticData?: Anime[];
   className?: string;
   rounded?: boolean;
   testIdPrefix?: string;
@@ -25,6 +27,7 @@ const RowItem = ({
   seeAll = true,
   data,
   category,
+  staticData,
   className,
   rounded = false,
   testIdPrefix,
@@ -60,7 +63,15 @@ const RowItem = ({
         {seeAll && (
           <ScalePressable
             onPress={() => {
-              if (category) {
+              if (staticData?.length) {
+                router.push({
+                  pathname: '/browse/list',
+                  params: {
+                    title: encodeURIComponent(name),
+                    data: encodeURIComponent(JSON.stringify(staticData)),
+                  },
+                });
+              } else if (category) {
                 router.push({
                   pathname: '/browse/[category]',
                   params: { category, title: encodeURIComponent(name) },

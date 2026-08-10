@@ -500,6 +500,77 @@ export const fetchAniListDubbed = async (): Promise<Anime[]> => {
 };
 
 // ---------------------------------------------------------------------------
+// Episode images – from AniList streamingEpisodes (Crunchyroll / HiDive etc.)
+// ---------------------------------------------------------------------------
+
+const EPISODE_IMAGES_QUERY = `
+  query EpisodeImages($id: Int!) {
+    Media(id: $id, type: ANIME) {
+      streamingEpisodes {
+        title
+        thumbnail
+        url
+        site
+      }
+    }
+  }
+`;
+
+type RawStreamingEpisode = {
+  title?: string | null;
+  thumbnail?: string | null;
+  url?: string | null;
+  site?: string | null;
+};
+
+export type AniListEpisodeImage = {
+  /** 1-based episode number parsed from the title string, or 0 if unparseable */
+  number: number;
+  title: string;
+  thumbnail: string;
+};
+
+/**
+ * Fetches per-episode thumbnails from AniList's `streamingEpisodes` field.
+ * AniList titles are usually formatted as "Episode N - Title" or "Episode N".
+ * Returns an empty array when the anime has no streaming episode data.
+ */
+export const fetchAniListEpisodeImages = async (
+  animeId: string
+): Promise<AniListEpisodeImage[]> => {
+  const numericId = Number(animeId);
+  if (!Number.isInteger(numericId) || numericId <= 0) return [];
+
+  try {
+    const data = await queryAniList<{
+      Media: { streamingEpisodes?: RawStreamingEpisode[] | null } | null;
+    }>(EPISODE_IMAGES_QUERY, { id: numericId });
+
+    const episodes = data.Media?.streamingEpisodes ?? [];
+    return episodes
+      .filter((ep): ep is Required<Pick<RawStreamingEpisode, 'thumbnail'>> & RawStreamingEpisode =>
+        Boolean(ep.thumbnail)
+      )
+      .map((ep) => {
+        // Parse "Episode 3 - The Battle Begins" → number=3, title="The Battle Begins"
+        // or "Episode 3" → number=3, title="Episode 3"
+        const match = ep.title?.match(/Episode\s+(\d+(?:\.\d+)?)\s*(?:-\s*(.+))?/i);
+        const number = match ? parseFloat(match[1]) : 0;
+        const parsedTitle = match?.[2]?.trim() || ep.title || `Episode ${number}`;
+
+        return {
+          number,
+          title: parsedTitle,
+          thumbnail: ep.thumbnail!,
+        };
+      });
+  } catch {
+    // Silently fail — episode images are a nice-to-have enhancement
+    return [];
+  }
+};
+
+// ---------------------------------------------------------------------------
 // Browse (View All) – paginated by category key
 // ---------------------------------------------------------------------------
 

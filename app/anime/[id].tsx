@@ -411,6 +411,7 @@ const AnimeDetails = () => {
             <RowItem
               className="-mx-4 mt-1"
               data={animeExtras.recommendations}
+              staticData={animeExtras.recommendations}
               name="You Might Also Like"
               seeAll
             />
@@ -420,6 +421,7 @@ const AnimeDetails = () => {
 
       <EpisodeListSheet
         animeId={animeData.id}
+        fallbackImage={animeData.image}
         bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         enableBackdropPress
         enablePanDownToClose

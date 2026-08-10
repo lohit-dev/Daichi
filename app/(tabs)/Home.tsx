@@ -20,6 +20,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimeBannerText from '~/components/home/AnimeBannerText';
+import ContinueWatchingRow from '~/components/home/ContinueWatchingRow';
 import Gradient from '~/components/home/Gradient';
 import HomeBanner from '~/components/home/HomeBanner';
 import HomeButtons from '~/components/home/HomeButtons';
@@ -217,6 +218,7 @@ const Home = () => {
             data={homePageData?.data?.topTables?.newlyAdded}
             rounded
           />
+          <ContinueWatchingRow />
           <RowItem
             name="Latest Episodes"
             seeAll
