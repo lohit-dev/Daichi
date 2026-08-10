@@ -2,7 +2,7 @@
   "expo": {
     "name": "animax",
     "slug": "animax",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "animax",
     "web": {
       "bundler": "metro",
@@ -43,7 +43,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0e0f0d"
       },
       "package": "com.king_grey.animax",
       "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],

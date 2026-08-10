@@ -1,6 +1,21 @@
-# Animax
+<div align="center">
 
-A modern anime streaming application built with **Expo**, **React Native**, and **TypeScript**. Discover trending anime, browse episodes, manage your personal library, and enjoy a clean streaming experience with smooth native animations.
+<img src="./assets/icon.png" width="100" height="100" alt="Daichi icon">
+
+# 大智 Daichi
+
+**A modern anime discovery & streaming app for Android and iOS.**
+
+[![build](https://img.shields.io/github/actions/workflow/status/lohit-dev/Animax-anitaku_V2/ci.yml?branch=master&label=build&color=b6e33e)](https://github.com/lohit-dev/Animax-anitaku_V2/actions)
+[![built with expo](https://img.shields.io/badge/built%20with-Expo-000.svg?logo=expo&color=b6e33e&logoColor=000)](https://expo.dev)
+
+</div>
+
+Daichi (大智, "great wisdom") is a free, open-source anime app built with **Expo**, **React Native**, and **TypeScript**. Discover trending anime, browse episodes, manage your personal library, and enjoy a clean streaming experience with smooth native animations.
+
+<div align="center">
+<img src="./assets/mockups/02-home-hero.png" width="200"> <img src="./assets/mockups/08-anime-details-header.png" width="200">
+</div>
 
 ---
 
@@ -19,123 +34,79 @@ A modern anime streaming application built with **Expo**, **React Native**, and 
 
 ## Screenshots
 
-### Home & Navigation
-
 <table>
 <tr>
 <td><img src="assets/mockups/01-launch.png" width="220"/></td>
-<td><img src="assets/mockups/02-home-hero.png" width="220"/></td>
-<td><img src="assets/mockups/03-scrolled-home.png" width="220"/></td>
-<td><img src="assets/mockups/04-category-grid.png" width="220"/></td>
+<td><img src="assets/mockups/02-go-to-home-screen.png" width="220"/></td>
+<td><img src="assets/mockups/03-discover-tab.png" width="220"/></td>
+<td><img src="assets/mockups/04-my-list-tab.png" width="220"/></td>
 </tr>
 <tr>
 <td align="center"><strong>Launch</strong></td>
-<td align="center"><strong>Home (Hero)</strong></td>
-<td align="center"><strong>Home (Browse)</strong></td>
-<td align="center"><strong>Category Grid</strong></td>
-</tr>
-</table>
-
-### Discover & Library
-
-<table>
-<tr>
-<td><img src="assets/mockups/05-discover-tab.png" width="220"/></td>
-<td><img src="assets/mockups/06-my-list-empty.png" width="220"/></td>
-<td><img src="assets/mockups/07-search-results.png" width="220"/></td>
-<td><img src="assets/mockups/14-my-list-populated.png" width="220"/></td>
-</tr>
-<tr>
+<td align="center"><strong>Home</strong></td>
 <td align="center"><strong>Discover</strong></td>
-<td align="center"><strong>Library (Empty)</strong></td>
-<td align="center"><strong>Search Results</strong></td>
-<td align="center"><strong>Library (Saved)</strong></td>
-</tr>
-</table>
-
-### Anime Details
-
-<table>
-<tr>
-<td><img src="assets/mockups/08-anime-details-header.png" width="220"/></td>
-<td><img src="assets/mockups/09-anime-details-story.png" width="220"/></td>
-<td><img src="assets/mockups/10-anime-details-cast.png" width="220"/></td>
-<td><img src="assets/mockups/11-episode-sheet.png" width="220"/></td>
+<td align="center"><strong>My Library</strong></td>
 </tr>
 <tr>
-<td align="center"><strong>Overview</strong></td>
-<td align="center"><strong>Synopsis & Details</strong></td>
-<td align="center"><strong>Cast & Characters</strong></td>
+<td><img src="assets/mockups/05-scrolled-home.png" width="220"/></td>
+<td><img src="assets/mockups/06-anime-details.png" width="220"/></td>
+<td><img src="assets/mockups/07-episode-sheet-opened.png" width="220"/></td>
+<td><img src="assets/mockups/08-episode-opened.png" width="220"/></td>
+</tr>
+<tr>
+<td align="center"><strong>Browse</strong></td>
+<td align="center"><strong>Anime Details</strong></td>
 <td align="center"><strong>Episode Sheet</strong></td>
-</tr>
-</table>
-
-### Video Streaming
-
-<table>
-<tr>
-<td><img src="assets/mockups/12-video-player-overlay.png" width="220"/></td>
-<td><img src="assets/mockups/13-video-player-active.png" width="220"/></td>
-</tr>
-<tr>
-<td align="center"><strong>Player Controls</strong></td>
-<td align="center"><strong>Active Video Playback</strong></td>
+<td align="center"><strong>Video Player</strong></td>
 </tr>
 </table>
 
 ---
 
-## Getting Started
+## Tech Stack
 
-Clone the repository.
-
-```bash
-git clone https://github.com/<your-username>/Animax.git
-cd Animax
-```
-
-Install dependencies.
-
-```bash
-bun install
-```
-
-or
-
-```bash
-yarn
-```
-
-Start the development server.
-
-```bash
-bunx expo start
-```
-
-Run on Android.
-
-```bash
-bunx expo run:android
-```
-
-Run on iOS.
-
-```bash
-bunx expo run:ios
-```
+- [Expo](https://expo.dev) + [React Native](https://reactnative.dev) + [TypeScript](https://www.typescriptlang.org/)
+- [Expo Router](https://docs.expo.dev/router/introduction/) for navigation
+- [NativeWind](https://www.nativewind.dev/) (Tailwind for React Native)
+- [EAS Build](https://docs.expo.dev/build/introduction/) for native builds
 
 ---
 
-## Build
+## Issues & Feature Requests
 
-Build an Android application.
+This is a personal project maintained in my spare time — response times may vary, but issues and PRs are genuinely welcome.
 
-```bash
-eas build --platform android
+**Before opening an issue:**
+
+- Check whether it's already been reported in [Issues](https://github.com/lohit-dev/Animax-anitaku_V2/issues)
+- Make sure you're on the latest version
+- Include steps to reproduce and, if relevant, a screenshot
+
+**Feature requests:**
+
+- Describe what the feature should do and why, rather than just "like app X does"
+- Keep one request per issue
+
+---
+
+## License
+
+```
+Copyright 2026 King Grey (lohit-dev)
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 ```
 
-Build an iOS application.
+## Disclaimer
 
-```bash
-eas build --platform ios
-```
+The developer of this application does not have any affiliation with the content providers available through it.
