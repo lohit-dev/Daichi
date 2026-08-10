@@ -47,7 +47,7 @@ const EpisodeListSheet = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  const { data: episodeData, isLoading, error } = useEpisodeList(animeId, type);
+  const { data: episodeData, isLoading, error } = useEpisodeList(animeId, type, fallbackImage);
 
   const episodes: Episode[] = useMemo(() => {
     if (!episodeData) return [];

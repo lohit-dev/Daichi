@@ -514,6 +514,56 @@ type RawStreamingEpisode = {
   site?: string | null;
 };
 
+type KitsuMappingResponse = {
+  data?: Array<{
+    id?: string;
+    type?: string;
+    attributes?: {
+      externalSite?: string | null;
+      externalId?: string | number | null;
+    } | null;
+    relationships?: {
+      item?: {
+        data?: {
+          id?: string | null;
+          type?: string | null;
+        } | null;
+      } | null;
+    } | null;
+  }>;
+  included?: Array<{
+    id?: string;
+    type?: string;
+    attributes?: Record<string, unknown>;
+  }>;
+};
+
+type KitsuEpisodeThumbnail =
+  | string
+  | {
+      original?: string | null;
+      url?: string | null;
+      meta?: Record<string, unknown> | null;
+    }
+  | null
+  | undefined;
+
+type KitsuEpisodeResponse = {
+  data?: Array<{
+    id?: string;
+    attributes?: {
+      number?: number | string | null;
+      relativeNumber?: number | string | null;
+      canonicalTitle?: string | null;
+      titles?: Record<string, string | null> | null;
+      thumbnail?: KitsuEpisodeThumbnail;
+    } | null;
+  }> | null;
+  meta?: {
+    count?: number | null;
+  } | null;
+};
+
 export type AniListEpisodeImage = {
   /** 1-based episode number parsed from the title string, or 0 if unparseable */
   number: number;
@@ -521,45 +571,203 @@ export type AniListEpisodeImage = {
   thumbnail: string;
 };
 
+const resolveKitsuAnimeIdFromMal = async (malId: number | string): Promise<string | null> => {
+  if (!malId || Number(malId) <= 0) return null;
+
+  const url = `https://kitsu.io/api/edge/mappings?filter[externalSite]=myanimelist%2Fanime&filter[externalId]=${encodeURIComponent(String(malId))}&include=item`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: 'application/vnd.api+json' },
+    });
+
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as KitsuMappingResponse;
+    const matchingEntry = payload.data?.find(
+      (entry) =>
+        entry.attributes?.externalSite === 'myanimelist/anime' ||
+        entry.attributes?.externalId?.toString() === String(malId)
+    );
+
+    const item = matchingEntry?.relationships?.item?.data;
+    if (item?.id) return String(item.id);
+
+    const includedAnime = payload.included?.find((entry) => entry.type === 'anime');
+    return includedAnime?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveKitsuEpisodeThumbnail = (thumbnail: KitsuEpisodeThumbnail): string | null => {
+  if (typeof thumbnail === 'string' && thumbnail.trim()) return thumbnail;
+
+  if (thumbnail && typeof thumbnail === 'object') {
+    const original = thumbnail.original;
+    const url = thumbnail.url;
+
+    if (typeof original === 'string' && original.trim()) return original;
+    if (typeof url === 'string' && url.trim()) return url;
+  }
+
+  return null;
+};
+
+export const fetchKitsuEpisodeImagesByMalId = async (
+  malId: number | string | null | undefined
+): Promise<AniListEpisodeImage[]> => {
+  if (!malId || Number(malId) <= 0) return [];
+
+  const kitsuAnimeId = await resolveKitsuAnimeIdFromMal(malId);
+  if (!kitsuAnimeId) {
+    console.log('[kitsu-thumbnail-debug] no Kitsu anime id found for MAL', malId);
+    return [];
+  }
+
+  const allEpisodes: AniListEpisodeImage[] = [];
+  const pageLimit = 20;
+
+  try {
+    let offset = 0;
+    while (true) {
+      const response = await fetch(
+        `https://kitsu.io/api/edge/anime/${encodeURIComponent(kitsuAnimeId)}/episodes?page[limit]=${pageLimit}&page[offset]=${offset}&sort=number`,
+        { headers: { Accept: 'application/vnd.api+json' } }
+      );
+
+      if (!response.ok) {
+        console.log(
+          '[kitsu-thumbnail-debug] Kitsu episodes request failed',
+          response.status,
+          'for anime',
+          kitsuAnimeId
+        );
+        break;
+      }
+
+      const payload = (await response.json()) as KitsuEpisodeResponse;
+      const pageEpisodes = (payload.data ?? [])
+        .map((ep) => {
+          const attributes = ep.attributes ?? {};
+          const rawNumber = Number(attributes.number ?? attributes.relativeNumber ?? 0);
+          const number = Number.isFinite(rawNumber) && rawNumber > 0 ? rawNumber : 0;
+          const thumbnail = resolveKitsuEpisodeThumbnail(attributes.thumbnail);
+
+          if (!thumbnail || !number) {
+            return null;
+          }
+
+          const title =
+            (attributes.titles && (attributes.titles.en || attributes.titles.en_jp)) ||
+            attributes.canonicalTitle ||
+            `Episode ${number}`;
+
+          return {
+            number,
+            title,
+            thumbnail,
+          } satisfies AniListEpisodeImage;
+        })
+        .filter((episode): episode is AniListEpisodeImage => Boolean(episode));
+
+      console.log('[kitsu-thumbnail-debug] page offset', offset, 'items', pageEpisodes.length);
+      allEpisodes.push(...pageEpisodes);
+
+      const totalCount = payload.meta?.count ?? 0;
+      if (pageEpisodes.length === 0 || offset + pageEpisodes.length >= totalCount) break;
+      offset += pageEpisodes.length;
+    }
+
+    console.log(
+      '[kitsu-thumbnail-debug] total Kitsu thumbnails',
+      allEpisodes.length,
+      'for MAL',
+      malId
+    );
+    return allEpisodes;
+  } catch (error) {
+    console.log('[kitsu-thumbnail-debug] Kitsu fetch error', error);
+    return [];
+  }
+};
+
 /**
  * Fetches per-episode thumbnails from AniList's `streamingEpisodes` field.
  * AniList titles are usually formatted as "Episode N - Title" or "Episode N".
  * Returns an empty array when the anime has no streaming episode data.
  */
-export const fetchAniListEpisodeImages = async (
-  animeId: string
+export const fetchEpisodeImagesForAnime = async (
+  animeId: string,
+  malId?: number | null
 ): Promise<AniListEpisodeImage[]> => {
-  const numericId = Number(animeId);
-  if (!Number.isInteger(numericId) || numericId <= 0) return [];
+  const results = new Map<number, AniListEpisodeImage>();
 
-  try {
-    const data = await queryAniList<{
-      Media: { streamingEpisodes?: RawStreamingEpisode[] | null } | null;
-    }>(EPISODE_IMAGES_QUERY, { id: numericId });
-
-    const episodes = data.Media?.streamingEpisodes ?? [];
-    return episodes
-      .filter((ep): ep is Required<Pick<RawStreamingEpisode, 'thumbnail'>> & RawStreamingEpisode =>
-        Boolean(ep.thumbnail)
-      )
-      .map((ep) => {
-        // Parse "Episode 3 - The Battle Begins" → number=3, title="The Battle Begins"
-        // or "Episode 3" → number=3, title="Episode 3"
-        const match = ep.title?.match(/Episode\s+(\d+(?:\.\d+)?)\s*(?:-\s*(.+))?/i);
-        const number = match ? parseFloat(match[1]) : 0;
-        const parsedTitle = match?.[2]?.trim() || ep.title || `Episode ${number}`;
-
-        return {
-          number,
-          title: parsedTitle,
-          thumbnail: ep.thumbnail!,
-        };
-      });
-  } catch {
-    // Silently fail — episode images are a nice-to-have enhancement
-    return [];
+  const kitsuImages = await fetchKitsuEpisodeImagesByMalId(malId);
+  for (const image of kitsuImages) {
+    results.set(Math.round(image.number), image);
   }
+
+  const numericId = Number(animeId);
+  if (Number.isInteger(numericId) && numericId > 0) {
+    try {
+      const data = await queryAniList<{
+        Media: { streamingEpisodes?: RawStreamingEpisode[] | null } | null;
+      }>(EPISODE_IMAGES_QUERY, { id: numericId });
+
+      const episodes = data.Media?.streamingEpisodes ?? [];
+      const anilistImages = episodes
+        .filter(
+          (ep): ep is Required<Pick<RawStreamingEpisode, 'thumbnail'>> & RawStreamingEpisode =>
+            Boolean(ep.thumbnail)
+        )
+        .map((ep) => {
+          const match = ep.title?.match(/Episode\s+(\d+(?:\.\d+)?)\s*(?:-\s*(.+))?/i);
+          const number = match ? parseFloat(match[1]) : 0;
+          const parsedTitle = match?.[2]?.trim() || ep.title || `Episode ${number}`;
+
+          return {
+            number,
+            title: parsedTitle,
+            thumbnail: ep.thumbnail!,
+          };
+        });
+
+      for (const image of anilistImages) {
+        const key = Math.round(image.number);
+        if (!results.has(key)) {
+          results.set(key, image);
+        }
+      }
+
+      console.log(
+        '[kitsu-thumbnail-debug] merged image count',
+        results.size,
+        'for',
+        animeId,
+        'kitsu',
+        kitsuImages.length,
+        'anilist',
+        anilistImages.length
+      );
+    } catch (error) {
+      console.log('[kitsu-thumbnail-debug] AniList fetch error', error);
+    }
+  } else {
+    console.log('[kitsu-thumbnail-debug] numeric AniList id invalid', animeId);
+  }
+
+  if (results.size > 0) {
+    console.log('[kitsu-thumbnail-debug] using merged thumbnails', results.size, 'for', animeId);
+  }
+
+  return Array.from(results.values()).sort((a, b) => a.number - b.number);
 };
+
+export const fetchAniListEpisodeImages = async (
+  animeId: string,
+  malId?: number | null
+): Promise<AniListEpisodeImage[]> => fetchEpisodeImagesForAnime(animeId, malId);
 
 // ---------------------------------------------------------------------------
 // Browse (View All) – paginated by category key
