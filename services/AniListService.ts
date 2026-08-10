@@ -1,3 +1,4 @@
+import { cleanHtml, formatIdToTitle } from '~/helpers/common';
 import {
   AniListAnimeDetails,
   AniListHomeResponse,
@@ -47,6 +48,9 @@ type RawMedia = {
   genres?: string[] | null;
   popularity?: number | null;
   nextAiringEpisode?: { episode?: number | null } | null;
+  studios?: {
+    nodes?: { name?: string | null }[] | null;
+  } | null;
 };
 
 type RawCharacter = {
@@ -104,6 +108,7 @@ const MEDIA_FIELDS = `
   genres
   popularity
   nextAiringEpisode { episode }
+  studios(isMain: true) { nodes { name } }
 `;
 
 const HOME_QUERY = `
@@ -218,26 +223,11 @@ const EXTRAS_QUERY = `
   }
 `;
 
-const cleanHtml = (value: string | null | undefined) =>
-  (value ?? '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
 const titleOf = (media: RawMedia) =>
   media.title?.english?.trim() ||
   media.title?.romaji?.trim() ||
   media.title?.native?.trim() ||
   'Untitled';
-
-const formatLabel = (value: string | null | undefined) =>
-  value ? value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'Anime';
 
 const statusLabel = (value: string | null | undefined) => {
   switch (value) {
@@ -252,14 +242,15 @@ const statusLabel = (value: string | null | undefined) => {
     case 'CANCELLED':
       return 'Cancelled';
     default:
-      return formatLabel(value);
+      return value ? value.charAt(0) + value.slice(1).toLowerCase() : 'Unknown';
   }
 };
 
-const seasonLabel = (media: RawMedia) => {
-  if (media.season && media.seasonYear) return `${formatLabel(media.season)} ${media.seasonYear}`;
+const seasonOf = (media: RawMedia) => {
+  if (media.season && media.seasonYear)
+    return `${formatIdToTitle(media.season)} ${media.seasonYear}`;
   if (media.startDate?.year) return String(media.startDate.year);
-  return 'TBA';
+  return undefined;
 };
 
 const mapAnime = (media: RawMedia, rank?: number): Anime => ({
@@ -270,10 +261,10 @@ const mapAnime = (media: RawMedia, rank?: number): Anime => ({
     ? { id: media.trailer.id, site: media.trailer.site || undefined }
     : undefined,
   synopsis: cleanHtml(media.description),
-  quality: formatLabel(media.format),
+  quality: formatIdToTitle(media.format) || 'Anime',
   rating: media.averageScore ? `${(media.averageScore / 10).toFixed(1)}` : 'N/A',
-  date: seasonLabel(media),
-  type: formatLabel(media.format),
+  date: seasonOf(media) || 'TBA',
+  type: formatIdToTitle(media.format) || 'Anime',
   episode: media.episodes ? `${media.episodes} Episodes` : undefined,
   episodeNumber: media.episodes ? String(media.episodes) : undefined,
   genres: media.genres ?? [],
@@ -300,12 +291,12 @@ const mapDetails = (media: RawMedia): AniListAnimeDetails => {
     bannerImage: media.bannerImage || undefined,
     synopsis: cleanHtml(media.description) || 'No description is available for this anime.',
     rating: media.averageScore ? `${(media.averageScore / 10).toFixed(1)}` : 'N/A',
-    quality: formatLabel(media.format),
+    quality: formatIdToTitle(media.format) || 'Anime',
     genres: media.genres ?? [],
     status: statusLabel(media.status),
-    released: seasonLabel(media),
-    duration: media.duration ? `${media.duration} min` : 'Unknown duration',
-    type: formatLabel(media.format),
+    released: seasonOf(media) || 'TBA',
+    duration: media.duration ? `${media.duration}m` : 'Unknown',
+    type: formatIdToTitle(media.format) || 'Anime',
     malRating: media.averageScore ? `${media.averageScore}%` : 'N/A',
     aniListId: media.id,
     malId: media.idMal ?? null,
@@ -462,7 +453,7 @@ export const fetchAniListAnimeExtras = async (animeId: string) => {
         id: String(character.id),
         name: character.name?.full || character.name?.native || 'Unknown character',
         image: character.image?.large || '',
-        role: formatLabel(edge.role),
+        role: formatIdToTitle(edge.role) || 'Unknown',
         voiceActor: actor
           ? {
               id: String(actor.id),

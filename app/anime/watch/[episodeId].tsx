@@ -13,6 +13,7 @@ import PlayerOverlay from '~/components/watch/PlayerOverlay';
 import SettingsSheet from '~/components/watch/SettingsSheet';
 import UpNextCard from '~/components/watch/UpNextCard';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
+import { formatIdToTitle } from '~/helpers/common';
 import { useEpisodeList } from '~/hooks/useEpisodeList';
 import { usePlayerControls } from '~/hooks/usePlayerControls';
 import { useVideoPlayer } from '~/hooks/useVideoPlayer';
@@ -175,9 +176,7 @@ const WatchScreen = () => {
     lastSavedProgressRef.current = { episodeId, second };
     saveProgress({
       animeId,
-      animeTitle:
-        animeTitle ||
-        animeId.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase()),
+      animeTitle: animeTitle || formatIdToTitle(animeId),
       animeImage: animeImage || '',
       episodeId,
       episodeNumber: episodeId,
@@ -295,10 +294,7 @@ const WatchScreen = () => {
         {/* Controls overlay */}
         <PlayerOverlay
           episodeId={episodeId}
-          animeTitle={
-            animeTitle ||
-            animeId.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
-          }
+          animeTitle={animeTitle || formatIdToTitle(animeId)}
           controlsAnim={controlsAnim}
           seekPanResponder={seekPanResponder}
           activeSubtitleCues={activeSubtitleCues}
