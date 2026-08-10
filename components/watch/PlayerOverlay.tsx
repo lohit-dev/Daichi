@@ -8,7 +8,8 @@ import ScalePressable from '../shared/ScalePressable';
 
 import { usePlayerStore, RESIZE_MODES } from '~/app/_store/usePlayerStore';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
-import { clamp, formatTimecode } from '~/helpers/subtitles';
+import { formatTime } from '~/helpers/common';
+import { clamp } from '~/helpers/subtitles';
 import { SubtitleCue } from '~/types';
 
 // ---------------------------------------------------------------------------
@@ -328,7 +329,7 @@ const PlayerOverlay = ({
                     paddingVertical: 3,
                   }}>
                   <Text style={{ color: COLORS.accent, fontSize: 11, fontWeight: '600' }}>
-                    {formatTimecode(scrubPreviewTime)}
+                    {formatTime(scrubPreviewTime)}
                   </Text>
                 </View>
               )}
@@ -341,8 +342,8 @@ const PlayerOverlay = ({
                   fontSize: timecodeFontSize,
                   fontWeight: '500',
                 }}>
-                {formatTimecode(currentTime)}
-                <Text style={{ color: COLORS.textFaint }}> / {formatTimecode(duration)}</Text>
+                {formatTime(currentTime)}
+                <Text style={{ color: COLORS.textFaint }}> / {formatTime(duration)}</Text>
               </Text>
 
               <ScalePressable

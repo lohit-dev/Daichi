@@ -30,7 +30,7 @@ const WatchScreen = () => {
   // Reset store on mount, clean up on unmount
   useEffect(() => {
     usePlayerStore.getState().reset();
-    
+
     // Check if we have saved progress for this exact episode
     const historyItem = useHistoryStore.getState().history[animeId];
     if (historyItem && historyItem.episodeId === episodeId && historyItem.progress > 0) {
