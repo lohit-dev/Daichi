@@ -5,11 +5,11 @@ import { useMemo } from 'react';
 import { FlatList, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 
-import ScalePressable from '~/components/shared/ScalePressable';
 import { useHistoryStore, HistoryItem } from '~/app/_store/useHistoryStore';
-import { fetchAniListEpisodeImages } from '~/services/AniListService';
-import { hp, wp } from '~/helpers/common';
+import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
+import { hp, wp } from '~/helpers/common';
+import { fetchAniListEpisodeImages } from '~/services/AniListService';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ const formatTime = (seconds: number): string => {
 
 // ─── Card dimensions ─────────────────────────────────────────────────────────
 
-const CARD_WIDTH = wp(47);
+const CARD_WIDTH = wp(50);
 const CARD_HEIGHT = CARD_WIDTH * (10 / 16); // slightly taller than 16:9
 
 // ─── Card ─────────────────────────────────────────────────────────────────────

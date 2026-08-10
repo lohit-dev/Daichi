@@ -30,8 +30,16 @@ const WatchScreen = () => {
   // Reset store on mount, clean up on unmount
   useEffect(() => {
     usePlayerStore.getState().reset();
+    
+    // Check if we have saved progress for this exact episode
+    const historyItem = useHistoryStore.getState().history[animeId];
+    if (historyItem && historyItem.episodeId === episodeId && historyItem.progress > 0) {
+      // If we do, queue it up so handleLoad will automatically seek to it
+      usePlayerStore.getState().setPendingSeek(historyItem.progress);
+    }
+
     return () => usePlayerStore.getState().reset();
-  }, []);
+  }, [animeId, episodeId]);
 
   // -----------------------------------------------------------------------
   // Hooks
@@ -177,7 +185,15 @@ const WatchScreen = () => {
       progress: currentTime,
       duration: usePlayerStore.getState().duration || 0,
     });
-  }, [animeId, animeImage, animeTitle, currentEpisodeThumbnail, currentTime, episodeId, saveProgress]);
+  }, [
+    animeId,
+    animeImage,
+    animeTitle,
+    currentEpisodeThumbnail,
+    currentTime,
+    episodeId,
+    saveProgress,
+  ]);
 
   // -----------------------------------------------------------------------
   // Server selection handler
