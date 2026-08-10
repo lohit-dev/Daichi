@@ -1,7 +1,6 @@
 import { BottomSheetModal, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { useRouter } from 'expo-router';
 import { Play, SearchNormal1 } from 'iconsax-react-native';
-import { useCallback, useMemo, useState, RefObject } from 'react';
+import { useCallback, useMemo, useRef, useState, RefObject } from 'react';
 import { View, Text, ActivityIndicator, TextInput } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -18,11 +17,9 @@ type Episode = {
 
 type EpisodeListSheetProps = {
   animeId: string;
-  animeTitle: string;
-  animeImage: string;
   type: 'sub' | 'dub';
   bottomSheetRef: RefObject<BottomSheetModal>;
-  onEpisodePress?: (episodeId: string) => void;
+  onEpisodePress: (episodeId: string) => void;
   onDismiss?: () => void;
   enablePanDownToClose?: boolean;
   enableBackdropPress?: boolean;
@@ -32,8 +29,6 @@ type SortOrder = 'asc' | 'desc';
 
 const EpisodeListSheet = ({
   animeId,
-  animeTitle,
-  animeImage,
   type,
   bottomSheetRef,
   onEpisodePress,
@@ -41,8 +36,8 @@ const EpisodeListSheet = ({
   enablePanDownToClose = true,
   enableBackdropPress = true,
 }: EpisodeListSheetProps) => {
-  const router = useRouter();
   const snapPoints = useMemo(() => ['72%'], []);
+  const isSelectingEpisodeRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
@@ -87,20 +82,13 @@ const EpisodeListSheet = ({
 
   const handleEpisodePress = useCallback(
     (episode: Episode) => {
-      onEpisodePress?.(episode.episodeId);
+      if (isSelectingEpisodeRef.current) return;
+
+      isSelectingEpisodeRef.current = true;
+      onEpisodePress(episode.episodeId);
       bottomSheetRef.current?.dismiss?.();
-      router.push({
-        pathname: '/anime/watch/[episodeId]',
-        params: {
-          episodeId: episode.number.toString(),
-          animeId,
-          type,
-          animeTitle,
-          animeImage,
-        },
-      });
     },
-    [animeId, animeTitle, animeImage, bottomSheetRef, onEpisodePress, router, type]
+    [bottomSheetRef, onEpisodePress]
   );
 
   const renderEpisodeCard = useCallback(
@@ -129,12 +117,9 @@ const EpisodeListSheet = ({
                 {item.title}
               </Text>
             </View>
-            <ScalePressable
-              className="rounded-full bg-lime-500 p-3"
-              haptic="medium"
-              onPress={() => handleEpisodePress(item)}>
+            <View className="rounded-full bg-lime-500 p-3">
               <Play size={20} color="#FFF" variant="Bold" />
-            </ScalePressable>
+            </View>
           </View>
         </ScalePressable>
       </Animated.View>
@@ -151,6 +136,7 @@ const EpisodeListSheet = ({
       enablePanDownToClose={enablePanDownToClose}
       backdropComponent={enableBackdropPress ? undefined : () => null}
       onDismiss={() => {
+        isSelectingEpisodeRef.current = false;
         setSearchQuery('');
         setSortOrder('asc');
         onDismiss?.();

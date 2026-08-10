@@ -1,7 +1,6 @@
-import { TickCircle } from 'iconsax-react-native';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { FlatList, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Image, Text, TextInput, View } from 'react-native';
 
 import ScalePressable from '~/components/shared/ScalePressable';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
@@ -34,11 +33,6 @@ const EpisodeList = ({
 }: EpisodeListProps) => {
   const listRef = useRef<FlatList<Episode>>(null);
   const [jumpValue, setJumpValue] = useState('');
-
-  const currentIndex = useMemo(
-    () => episodes.findIndex((ep) => ep.id === currentEpisodeId),
-    [episodes, currentEpisodeId]
-  );
 
   const handleJump = () => {
     const target = Number(jumpValue);
@@ -99,7 +93,7 @@ const EpisodeList = ({
                   returnKeyType="go"
                   style={{ flex: 1, color: COLORS.text, height: 42 }}
                 />
-                <ScalePressable onPress={handleJump} scaleTo={0.88} haptic="light">
+                <ScalePressable onPress={handleJump} scaleTo={0.96}>
                   <Text style={{ color: COLORS.accent, fontWeight: '700', fontSize: 12 }}>Go</Text>
                 </ScalePressable>
               </View>
@@ -109,14 +103,11 @@ const EpisodeList = ({
       }
       renderItem={({ item }) => {
         const isCurrent = item.id === currentEpisodeId;
-        const isWatched =
-          currentIndex >= 0 && Number(item.number) < Number(episodes[currentIndex]?.number ?? 0);
 
         return (
           <ScalePressable
             onPress={() => onSelectEpisode(item)}
-            scaleTo={0.97}
-            haptic="light"
+            scaleTo={0.99}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -140,7 +131,7 @@ const EpisodeList = ({
               }}>
               <Image
                 source={{ uri: item.image || fallbackImage }}
-                style={{ width: '100%', height: '100%', opacity: isWatched ? 0.45 : 1 }}
+                style={{ width: '100%', height: '100%' }}
               />
               <View
                 style={{
@@ -156,11 +147,6 @@ const EpisodeList = ({
                   EP {item.number}
                 </Text>
               </View>
-              {isWatched && (
-                <View style={{ position: 'absolute', top: 4, right: 4 }}>
-                  <TickCircle size={16} color={COLORS.accent} variant="Bold" />
-                </View>
-              )}
             </View>
 
             <View style={{ flex: 1 }}>

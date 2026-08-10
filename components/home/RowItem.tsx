@@ -66,8 +66,7 @@ const RowItem = ({
                   params: { category, title: encodeURIComponent(name) },
                 });
               }
-            }}
-            haptic={category ? 'light' : 'none'}>
+            }}>
             <Text className="font-salsa text-base text-lime-300">View all</Text>
           </ScalePressable>
         )}

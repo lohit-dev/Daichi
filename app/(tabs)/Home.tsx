@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import LottieView from 'lottie-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   ScrollView,
   useWindowDimensions,
   View,
@@ -26,10 +28,12 @@ import { hp, wp } from '~/helpers/common';
 import { fetchAniListHomePage } from '~/services/AniListService';
 import { Anime } from '~/types';
 
+const AUTOPLAY_INTERVAL_MS = 4_500;
+
 const Home = () => {
   const { width } = useWindowDimensions();
   const {
-    data: HomePageData,
+    data: homePageData,
     error,
     isLoading,
   } = useQuery({
@@ -37,63 +41,109 @@ const Home = () => {
     queryFn: fetchAniListHomePage,
   });
 
-  const [anime, setAnime] = useState<Anime[]>(HomePageData?.data?.spotlight || []);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [spotlightAnime, setSpotlightAnime] = useState<Anime[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
 
   const x = useSharedValue(0);
-  const ref = useAnimatedRef<Animated.FlatList<any>>();
-  const interval = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const viewabilityConfig: ViewabilityConfig = {
-    itemVisiblePercentThreshold: 50,
-  };
-
-  const onViewableItemsChanged = ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    if (viewableItems[0]?.index !== undefined && viewableItems[0].index !== null) {
-      setCurrentIndex(viewableItems[0]?.index);
-    }
-  };
-
-  const viewAbilityConfigCallbackPairs = useRef<ViewabilityConfigCallbackPair[]>([
-    { viewabilityConfig, onViewableItemsChanged },
+  const bannerRef = useAnimatedRef<Animated.FlatList<Anime>>();
+  const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const viewabilityConfig = useRef<ViewabilityConfig>({ itemVisiblePercentThreshold: 50 });
+  const bannerViewabilityPairs = useRef<ViewabilityConfigCallbackPair[]>([
+    {
+      viewabilityConfig: viewabilityConfig.current,
+      onViewableItemsChanged: ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+        const visibleIndex = viewableItems.find((item) => item.isViewable)?.index;
+        if (visibleIndex !== null && visibleIndex !== undefined) {
+          setActiveIndex(visibleIndex);
+        }
+      },
+    },
   ]);
 
+  // Three copies create a continuous window in both directions. We always
+  // re-centre onto the same item after settling at either outer copy, so the
+  // reposition itself is invisible to the user.
+  const loopedSpotlight = useMemo(
+    () =>
+      spotlightAnime.length > 1
+        ? [...spotlightAnime, ...spotlightAnime, ...spotlightAnime]
+        : spotlightAnime,
+    [spotlightAnime]
+  );
+
+  const activeAnime = loopedSpotlight[activeIndex] ?? spotlightAnime[0];
+
+  const openDetails = useCallback((anime: Anime) => {
+    router.push({
+      pathname: '/anime/[id]',
+      params: { id: anime.slug, poster: anime.image },
+    });
+  }, []);
+
   const onScroll = useAnimatedScrollHandler({
-    onScroll: (e) => {
-      x.value = e.contentOffset.x;
+    onScroll: (event) => {
+      x.value = event.contentOffset.x;
     },
   });
 
   useEffect(() => {
-    if (HomePageData?.data?.spotlight) {
-      setAnime(HomePageData.data.spotlight);
+    const spotlight = homePageData?.data?.spotlight ?? [];
+    const startIndex = spotlight.length > 1 ? spotlight.length : 0;
+
+    setSpotlightAnime(spotlight);
+    setActiveIndex(startIndex);
+
+    if (spotlight.length > 1) {
+      requestAnimationFrame(() => {
+        bannerRef.current?.scrollToOffset({
+          offset: startIndex * width,
+          animated: false,
+        });
+      });
     }
-  }, [HomePageData]);
+  }, [bannerRef, homePageData, width]);
+
+  const handleBannerMomentumEnd = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!spotlightAnime.length || width <= 0) return;
+
+      const visibleIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+      let nextIndex = visibleIndex;
+
+      if (spotlightAnime.length > 1) {
+        if (visibleIndex < spotlightAnime.length) {
+          nextIndex = visibleIndex + spotlightAnime.length;
+        } else if (visibleIndex >= spotlightAnime.length * 2) {
+          nextIndex = visibleIndex - spotlightAnime.length;
+        }
+
+        if (nextIndex !== visibleIndex) {
+          bannerRef.current?.scrollToOffset({
+            offset: nextIndex * width,
+            animated: false,
+          });
+        }
+      }
+
+      setActiveIndex(nextIndex);
+      setIsAutoPlay(true);
+    },
+    [bannerRef, spotlightAnime.length, width]
+  );
 
   useEffect(() => {
-    if (isAutoPlay && anime.length > 1) {
-      interval.current = setInterval(() => {
-        const nextIndex = (currentIndex + 1) % anime.length;
-        setCurrentIndex(nextIndex);
+    if (!isAutoPlay || spotlightAnime.length < 2) return;
 
-        ref.current?.scrollToOffset({
-          offset: Math.round(nextIndex * width),
-          animated: true,
-        });
-      }, 4000);
-    } else {
-      if (interval.current) {
-        clearInterval(interval.current);
-      }
-    }
+    autoplayRef.current = setInterval(() => {
+      const nextIndex = activeIndex + 1;
+      bannerRef.current?.scrollToOffset({ offset: nextIndex * width, animated: true });
+    }, AUTOPLAY_INTERVAL_MS);
 
     return () => {
-      if (interval.current) {
-        clearInterval(interval.current);
-      }
+      if (autoplayRef.current) clearInterval(autoplayRef.current);
     };
-  }, [isAutoPlay, currentIndex, anime.length, width]);
+  }, [activeIndex, bannerRef, isAutoPlay, spotlightAnime.length, width]);
 
   if (isLoading) {
     return (
@@ -128,101 +178,69 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
         scrollEventThrottle={16}>
-        {/* Home Banner for the current anime */}
-        {anime.length > 0 &&
-          anime.map((animeItem: Anime, index: number) => {
-            return (
-              currentIndex === index && (
-                <HomeBanner
-                  key={animeItem.slug}
-                  index={index}
-                  item={animeItem}
-                  x={x}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/anime/[id]',
-                      params: { id: animeItem.slug, poster: animeItem.image },
-                    });
-                  }}
-                />
-              )
-            );
-          })}
-        {/* Gradient for the Banner */}
+        {activeAnime ? (
+          <HomeBanner item={activeAnime} onPress={() => openDetails(activeAnime)} />
+        ) : null}
         <Gradient />
 
-        {/* FlatList */}
         <View className="flex flex-col">
           <Animated.FlatList
-            onScrollBeginDrag={() => {
-              setIsAutoPlay(false);
-            }}
-            onScrollEndDrag={() => {
-              setIsAutoPlay(true);
-            }}
-            style={{ flexGrow: 0 }}
-            ref={ref}
-            data={anime}
-            onScroll={onScroll}
-            horizontal
-            viewabilityConfigCallbackPairs={viewAbilityConfigCallbackPairs.current}
             bounces={false}
+            data={loopedSpotlight}
+            getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+            horizontal
+            initialNumToRender={9}
+            keyExtractor={(item, index) => `spotlight-${item.slug}-${index}`}
+            maxToRenderPerBatch={9}
+            onMomentumScrollEnd={handleBannerMomentumEnd}
+            onScroll={onScroll}
+            onScrollBeginDrag={() => setIsAutoPlay(false)}
+            pagingEnabled
+            ref={bannerRef}
+            removeClippedSubviews
             scrollEventThrottle={16}
             showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            initialNumToRender={10}
-            maxToRenderPerBatch={20}
-            keyExtractor={(_, index) => `list_item${index}`}
-            renderItem={({ item, index }) => {
-              return (
-                <AnimeBannerText
-                  item={item}
-                  index={index}
-                  x={x}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/anime/[id]',
-                      params: { id: item.slug, poster: item.image },
-                    });
-                  }}
-                />
-              );
-            }}
+            style={{ flexGrow: 0 }}
+            viewabilityConfigCallbackPairs={bannerViewabilityPairs.current}
+            windowSize={5}
+            renderItem={({ item, index }) => (
+              <AnimeBannerText item={item} index={index} x={x} onPress={() => openDetails(item)} />
+            )}
           />
 
-          <HomeButtons />
-          {/* The Main Flatlist's */}
+          <HomeButtons anime={activeAnime} />
+
           <RowItem
             name="Hot Trends"
             seeAll
             category="popular"
-            data={HomePageData?.data?.topTables?.newlyAdded}
+            data={homePageData?.data?.topTables?.newlyAdded}
             rounded
           />
           <RowItem
             name="Latest Episodes"
             seeAll
             category="recent"
-            data={HomePageData?.data?.recentUpdates}
+            data={homePageData?.data?.recentUpdates}
             testIdPrefix="latest-episode"
           />
           <RowItem
             name="Upcoming Releases"
             seeAll
             category="upcoming"
-            data={HomePageData?.data?.upcoming}
+            data={homePageData?.data?.upcoming}
           />
           <RowItem
             name="Top Airing Now"
             seeAll
             category="airing"
-            data={HomePageData?.data?.topTables?.newReleases}
+            data={homePageData?.data?.topTables?.newReleases}
           />
           <RowItem
             name="Completed Series"
             seeAll
             category="completed"
-            data={HomePageData?.data?.topTables?.justCompleted}
+            data={homePageData?.data?.topTables?.justCompleted}
             className="mb-44"
           />
         </View>

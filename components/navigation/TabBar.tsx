@@ -59,7 +59,6 @@ const TabBar = ({ state, descriptors, navigation, insets }: TabBarProps) => {
             testID={options.tabBarTestID}
             onPress={onPress}
             scaleTo={0.88}
-            haptic="light"
             className="h-full flex-1 items-center justify-center">
             <View style={[styles.iconSlot, isFocused && styles.activeIconPill]}>
               {options.tabBarIcon

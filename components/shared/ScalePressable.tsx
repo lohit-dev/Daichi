@@ -4,7 +4,8 @@
  *
  * On press-in  → springs down to `scaleTo`   (default 0.93)
  * On press-out → springs back  to 1.0
- * Haptics fire on press-in (Light) by default; pass `haptic` to customise.
+ * Haptics are opt-in. Reserve them for meaningful completed actions rather
+ * than routine navigation and every tap.
  *
  * Usage:
  *   <ScalePressable onPress={…} style={…} className={…}>
@@ -44,7 +45,7 @@ const ScalePressable: React.FC<ScalePressableProps> = ({
   onPress,
   onLongPress,
   scaleTo = 0.93,
-  haptic = 'light',
+  haptic = 'none',
   style,
   className,
   children,
@@ -86,6 +87,14 @@ const ScalePressable: React.FC<ScalePressableProps> = ({
     scale.value = withSpring(1, SPRING_CONFIG);
   }, [scale]);
 
+  const handlePress = useCallback(
+    (event: GestureResponderEvent) => {
+      triggerHaptic();
+      onPress?.(event);
+    },
+    [onPress, triggerHaptic]
+  );
+
   return (
     <AnimatedPressable
       testID={testID}
@@ -94,7 +103,7 @@ const ScalePressable: React.FC<ScalePressableProps> = ({
       disabled={disabled}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onPress={onPress}
+      onPress={handlePress}
       onLongPress={onLongPress}
       style={[animatedStyle, style]}
       className={className}>

@@ -153,7 +153,7 @@ const PlayerOverlay = ({
           <ScalePressable
             className="flex-row items-center"
             onPress={() => setIsLocked(false)}
-            scaleTo={0.88}>
+            scaleTo={0.96}>
             <Ionicons name="lock-closed" size={15} color={COLORS.text} />
             <Text style={{ color: COLORS.text, marginLeft: 6, fontSize: 12, fontWeight: '600' }}>
               Unlock
@@ -239,16 +239,14 @@ const PlayerOverlay = ({
                 height: skipBtnSize,
                 backgroundColor: 'rgba(0,0,0,0.4)',
               }}
-              scaleTo={0.88}
-              haptic="light"
+              scaleTo={0.96}
               onPress={onSeekBackward}>
               <Ionicons name="play-back" size={skipIconSize} color={COLORS.text} />
             </ScalePressable>
             <ScalePressable
               className="items-center justify-center rounded-full"
               style={{ width: playBtnSize, height: playBtnSize, backgroundColor: COLORS.accent }}
-              scaleTo={0.9}
-              haptic="medium"
+              scaleTo={0.96}
               onPress={togglePlaying}>
               <Ionicons
                 name={isPlaying ? 'pause' : 'play'}
@@ -264,8 +262,7 @@ const PlayerOverlay = ({
                 height: skipBtnSize,
                 backgroundColor: 'rgba(0,0,0,0.4)',
               }}
-              scaleTo={0.88}
-              haptic="light"
+              scaleTo={0.96}
               onPress={onSeekForward}>
               <Ionicons name="play-forward" size={skipIconSize} color={COLORS.text} />
             </ScalePressable>
@@ -398,8 +395,7 @@ const TopButton = ({
       height: size,
       backgroundColor: 'rgba(38,38,38,0.75)',
     }}
-    scaleTo={0.85}
-    haptic="light"
+    scaleTo={0.96}
     onPress={onPress}>
     <Ionicons name={icon} size={iconSize} color={COLORS.text} />
   </ScalePressable>

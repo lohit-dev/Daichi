@@ -420,8 +420,6 @@ const AnimeDetails = () => {
 
       <EpisodeListSheet
         animeId={animeData.id}
-        animeImage={animeData.image}
-        animeTitle={animeData.title}
         bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         enableBackdropPress
         enablePanDownToClose
@@ -510,15 +508,15 @@ const styles = StyleSheet.create({
   },
   heroPillText: {
     color: '#182008',
-    fontFamily: 'Salsa',
     fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 0.8,
   },
   heroStatus: {
     flexShrink: 1,
     color: 'rgba(255,255,255,0.78)',
-    fontFamily: 'Salsa',
     fontSize: 13,
+    fontWeight: '600',
   },
   titleBlock: {
     flexDirection: 'row',
@@ -541,22 +539,21 @@ const styles = StyleSheet.create({
   kicker: {
     marginBottom: 5,
     color: '#bef264',
-    fontFamily: 'Salsa',
     fontSize: 11,
+    fontWeight: '700',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   title: {
     color: '#ffffff',
-    fontFamily: 'Salsa',
     fontSize: 28,
+    fontWeight: '700',
     lineHeight: 33,
     letterSpacing: 0.1,
   },
   alternateTitle: {
     marginTop: 7,
     color: 'rgba(255,255,255,0.56)',
-    fontFamily: 'Salsa',
     fontSize: 13,
   },
   content: {
@@ -584,14 +581,14 @@ const styles = StyleSheet.create({
   },
   quickFactValue: {
     color: '#ffffff',
-    fontFamily: 'Salsa',
     fontSize: 16,
+    fontWeight: '700',
   },
   quickFactLabel: {
     marginTop: 4,
     color: 'rgba(255,255,255,0.45)',
-    fontFamily: 'Salsa',
     fontSize: 9,
+    fontWeight: '700',
     letterSpacing: 0.9,
   },
   actionRow: {
@@ -612,8 +609,8 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: '#152008',
-    fontFamily: 'Salsa',
     fontSize: 16,
+    fontWeight: '700',
   },
   secondaryAction: {
     alignItems: 'center',
@@ -630,13 +627,12 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     color: '#ffffff',
-    fontFamily: 'Salsa',
     fontSize: 16,
+    fontWeight: '700',
   },
   upcomingNotice: {
     marginTop: 10,
     color: 'rgba(255,255,255,0.52)',
-    fontFamily: 'Salsa',
     fontSize: 12,
     lineHeight: 17,
   },
@@ -652,29 +648,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     color: '#ffffff',
-    fontFamily: 'Salsa',
     fontSize: 27,
+    fontWeight: '700',
     letterSpacing: 0.2,
-  },
-  sectionSubtitle: {
-    marginTop: 8,
-    color: 'rgba(255,255,255,0.58)',
-    fontFamily: 'Salsa',
-    fontSize: 13,
-    lineHeight: 19,
   },
   synopsis: {
     marginTop: 12,
     color: 'rgba(255,255,255,0.75)',
-    fontFamily: 'Salsa',
     fontSize: 15,
     lineHeight: 23,
   },
   readMore: {
     marginTop: 12,
     color: '#bef264',
-    fontFamily: 'Salsa',
     fontSize: 14,
+    fontWeight: '700',
   },
   infoPanel: {
     marginTop: 29,
@@ -692,53 +680,18 @@ const styles = StyleSheet.create({
   detailLabel: {
     width: 72,
     color: 'rgba(255,255,255,0.43)',
-    fontFamily: 'Salsa',
     fontSize: 12,
+    fontWeight: '600',
   },
   detailValue: {
     flex: 1,
     color: '#f5f5f4',
-    fontFamily: 'Salsa',
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'right',
   },
   detailValueAccent: {
     color: '#d9f99d',
-  },
-  episodeSection: {
-    marginTop: 36,
-  },
-  episodeActionRow: {
-    flexDirection: 'row',
-    gap: 11,
-    marginTop: 18,
-  },
-  episodeOption: {
-    flex: 1,
-    minHeight: 95,
-    justifyContent: 'flex-end',
-    borderWidth: 1,
-    borderColor: 'rgba(190,242,100,0.28)',
-    borderRadius: 18,
-    backgroundColor: '#14180f',
-    padding: 15,
-  },
-  episodeOptionDisabled: {
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: '#141414',
-  },
-  episodeOptionEyebrow: {
-    color: '#bef264',
-    fontFamily: 'Salsa',
-    fontSize: 9,
-    letterSpacing: 0.85,
-  },
-  episodeOptionTitle: {
-    marginTop: 5,
-    color: '#ffffff',
-    fontFamily: 'Salsa',
-    fontSize: 20,
   },
   extrasLoading: {
     alignItems: 'center',
@@ -754,7 +707,7 @@ const styles = StyleSheet.create({
   },
   errorBackText: {
     color: '#182008',
-    fontFamily: 'Salsa',
     fontSize: 15,
+    fontWeight: '700',
   },
 });

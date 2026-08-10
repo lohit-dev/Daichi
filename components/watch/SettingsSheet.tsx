@@ -80,8 +80,7 @@ const SettingsSheet = ({
               key={tab}
               className="flex-1 items-center rounded-full py-2.5"
               style={{ backgroundColor: activeTab === tab ? COLORS.accent : 'transparent' }}
-              scaleTo={0.93}
-              haptic="light"
+              scaleTo={0.97}
               onPress={() => setActiveTab(tab)}>
               <Text
                 style={{

@@ -34,6 +34,7 @@ type RawMedia = {
   synonyms?: string[] | null;
   coverImage?: { large?: string | null; extraLarge?: string | null } | null;
   bannerImage?: string | null;
+  trailer?: { id?: string | null; site?: string | null } | null;
   description?: string | null;
   averageScore?: number | null;
   format?: string | null;
@@ -90,6 +91,7 @@ const MEDIA_FIELDS = `
   synonyms
   coverImage { large extraLarge }
   bannerImage
+  trailer { id site }
   description
   averageScore
   format
@@ -111,6 +113,9 @@ const HOME_QUERY = `
     }
     airing: Page(page: 1, perPage: 20) {
       media(type: ANIME, isAdult: false, status: RELEASING, sort: [POPULARITY_DESC]) { ${MEDIA_FIELDS} }
+    }
+    recent: Page(page: 1, perPage: 20) {
+      media(type: ANIME, isAdult: false, status: RELEASING, sort: [UPDATED_AT_DESC]) { ${MEDIA_FIELDS} }
     }
     upcoming: Page(page: 1, perPage: 20) {
       media(type: ANIME, isAdult: false, status: NOT_YET_RELEASED, sort: [POPULARITY_DESC]) { ${MEDIA_FIELDS} }
@@ -261,6 +266,9 @@ const mapAnime = (media: RawMedia, rank?: number): Anime => ({
   title: titleOf(media),
   slug: String(media.id),
   image: media.coverImage?.extraLarge || media.coverImage?.large || '',
+  trailer: media.trailer?.id
+    ? { id: media.trailer.id, site: media.trailer.site || undefined }
+    : undefined,
   synopsis: cleanHtml(media.description),
   quality: formatLabel(media.format),
   rating: media.averageScore ? `${(media.averageScore / 10).toFixed(1)}` : 'N/A',
@@ -355,6 +363,7 @@ export const fetchAniListHomePage = async (): Promise<AniListHomeResponse> => {
   const data = await queryAniList<{
     spotlight: Pick<RawPage, 'media'>;
     airing: Pick<RawPage, 'media'>;
+    recent: Pick<RawPage, 'media'>;
     upcoming: Pick<RawPage, 'media'>;
     popular: Pick<RawPage, 'media'>;
     completed: Pick<RawPage, 'media'>;
@@ -363,7 +372,7 @@ export const fetchAniListHomePage = async (): Promise<AniListHomeResponse> => {
   return {
     data: {
       spotlight: data.spotlight.media.map((media, index) => mapAnime(media, index + 1)),
-      recentUpdates: data.airing.media.map(mapAnime),
+      recentUpdates: data.recent.media.map(mapAnime),
       upcoming: data.upcoming.media.map(mapAnime),
       topTables: {
         newReleases: data.airing.media.map(mapAnime),

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft } from 'iconsax-react-native';
-import { useEffect, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import Video from 'react-native-video';
 
@@ -144,22 +144,32 @@ const WatchScreen = () => {
   // -----------------------------------------------------------------------
 
   const saveProgress = useHistoryStore((s) => s.saveProgress);
+  const lastSavedProgressRef = useRef<{ episodeId: string; second: number } | null>(null);
 
-  // Throttle saving progress to every 5 seconds to avoid spamming AsyncStorage
+  // Persist the current title at a useful cadence. This is intentionally episode
+  // progress, not a watched marker: choosing the next episode must never mark the
+  // previous one as completed.
   useEffect(() => {
-    if (currentTime > 0 && Math.floor(currentTime) % 5 === 0) {
-      saveProgress({
-        animeId,
-        animeTitle:
-          animeTitle || animeId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        animeImage: animeImage || '',
-        episodeId,
-        episodeNumber: episodeId,
-        progress: currentTime,
-        duration: usePlayerStore.getState().duration || 0,
-      });
+    const second = Math.floor(currentTime);
+    const previous = lastSavedProgressRef.current;
+
+    if (second <= 0 || (previous?.episodeId === episodeId && second - previous.second < 5)) {
+      return;
     }
-  }, [Math.floor(currentTime)]);
+
+    lastSavedProgressRef.current = { episodeId, second };
+    saveProgress({
+      animeId,
+      animeTitle:
+        animeTitle ||
+        animeId.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase()),
+      animeImage: animeImage || '',
+      episodeId,
+      episodeNumber: episodeId,
+      progress: currentTime,
+      duration: usePlayerStore.getState().duration || 0,
+    });
+  }, [animeId, animeImage, animeTitle, currentTime, episodeId, saveProgress]);
 
   // -----------------------------------------------------------------------
   // Server selection handler
@@ -209,7 +219,7 @@ const WatchScreen = () => {
         options={{
           headerShown: !isFullscreen,
           headerLeft: () => (
-            <ScalePressable onPress={handleExit} style={{ padding: 8 }} scaleTo={0.85}>
+            <ScalePressable onPress={handleExit} style={{ padding: 8 }} scaleTo={0.96}>
               <ArrowLeft size={24} color={COLORS.text} />
             </ScalePressable>
           ),
@@ -261,7 +271,10 @@ const WatchScreen = () => {
         {/* Controls overlay */}
         <PlayerOverlay
           episodeId={episodeId}
-          animeTitle={animeId.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+          animeTitle={
+            animeTitle ||
+            animeId.replace(/-/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase())
+          }
           controlsAnim={controlsAnim}
           seekPanResponder={seekPanResponder}
           activeSubtitleCues={activeSubtitleCues}

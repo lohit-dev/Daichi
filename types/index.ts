@@ -6,6 +6,10 @@ export type Anime = {
   title: string;
   slug: string;
   image: string;
+  trailer?: {
+    id: string;
+    site?: string;
+  };
   synopsis?: string;
   quality?: string;
   rating?: string;
