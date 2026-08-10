@@ -515,7 +515,7 @@ type RawStreamingEpisode = {
 };
 
 type KitsuMappingResponse = {
-  data?: Array<{
+  data?: {
     id?: string;
     type?: string;
     attributes?: {
@@ -530,12 +530,12 @@ type KitsuMappingResponse = {
         } | null;
       } | null;
     } | null;
-  }>;
-  included?: Array<{
+  }[];
+  included?: {
     id?: string;
     type?: string;
     attributes?: Record<string, unknown>;
-  }>;
+  }[];
 };
 
 type KitsuEpisodeThumbnail =
@@ -549,16 +549,18 @@ type KitsuEpisodeThumbnail =
   | undefined;
 
 type KitsuEpisodeResponse = {
-  data?: Array<{
-    id?: string;
-    attributes?: {
-      number?: number | string | null;
-      relativeNumber?: number | string | null;
-      canonicalTitle?: string | null;
-      titles?: Record<string, string | null> | null;
-      thumbnail?: KitsuEpisodeThumbnail;
-    } | null;
-  }> | null;
+  data?:
+    | {
+        id?: string;
+        attributes?: {
+          number?: number | string | null;
+          relativeNumber?: number | string | null;
+          canonicalTitle?: string | null;
+          titles?: Record<string, string | null> | null;
+          thumbnail?: KitsuEpisodeThumbnail;
+        } | null;
+      }[]
+    | null;
   meta?: {
     count?: number | null;
   } | null;
