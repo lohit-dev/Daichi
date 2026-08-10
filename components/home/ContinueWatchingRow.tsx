@@ -1,27 +1,66 @@
+import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Play } from 'iconsax-react-native';
+import { CloseCircle } from 'iconsax-react-native';
 import { useMemo } from 'react';
-import {
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-  ImageBackground,
-} from 'react-native';
+import { FlatList, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 
 import ScalePressable from '~/components/shared/ScalePressable';
 import { useHistoryStore, HistoryItem } from '~/app/_store/useHistoryStore';
+import { fetchAniListEpisodeImages } from '~/services/AniListService';
 import { hp, wp } from '~/helpers/common';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 
-const CARD_WIDTH = wp(44);
-const CARD_HEIGHT = hp(12);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const ContinueWatchingCard = ({ item, index }: { item: HistoryItem; index: number }) => {
-  const progressPercent = item.duration > 0 ? Math.min(item.progress / item.duration, 1) : 0;
-  const progressWidth = `${Math.round(progressPercent * 100)}%` as `${number}%`;
+const formatTime = (seconds: number): string => {
+  if (!seconds || seconds <= 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+};
+
+// ─── Card dimensions ─────────────────────────────────────────────────────────
+
+const CARD_WIDTH = wp(47);
+const CARD_HEIGHT = CARD_WIDTH * (10 / 16); // slightly taller than 16:9
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+type CardProps = {
+  item: HistoryItem;
+  index: number;
+  onRemove: (animeId: string) => void;
+};
+
+const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
+  // Fetch AniList streaming episode thumbnails for this anime (cached by React Query)
+  const { data: episodeImages } = useQuery({
+    queryKey: ['anilist', 'episode-images', item.animeId],
+    queryFn: () => fetchAniListEpisodeImages(item.animeId),
+    staleTime: 30 * 60 * 1000,
+    enabled: !item.episodeThumbnail, // skip if already stored at watch time
+  });
+
+  // Priority: stored thumbnail → AniList query → anime cover
+  const thumbnail = useMemo(() => {
+    if (item.episodeThumbnail) return item.episodeThumbnail;
+
+    if (episodeImages?.length) {
+      const epNum = Math.round(parseFloat(item.episodeNumber));
+      const map = new Map(episodeImages.map((img) => [Math.round(img.number), img.thumbnail]));
+      const found = map.get(epNum);
+      if (found) return found;
+    }
+
+    return item.animeImage;
+  }, [item.episodeThumbnail, item.episodeNumber, item.animeImage, episodeImages]);
+
+  const progressRatio =
+    item.duration > 0 ? Math.min(Math.max(item.progress / item.duration, 0), 1) : 0;
+  const progressPercent = `${(progressRatio * 100).toFixed(1)}%` as `${number}%`;
+
+  const progressText = `${formatTime(item.progress)}/${formatTime(item.duration)}`;
 
   const handlePress = () => {
     router.push({
@@ -31,62 +70,66 @@ const ContinueWatchingCard = ({ item, index }: { item: HistoryItem; index: numbe
         animeId: item.animeId,
         animeTitle: item.animeTitle,
         animeImage: item.animeImage,
-        // Default to sub; user already had a type when they watched
         type: 'sub',
       },
     });
   };
 
   return (
-    <Animated.View entering={FadeInRight.delay(index * 80).duration(400)}>
-      <ScalePressable onPress={handlePress} scaleTo={0.95} style={styles.card}>
+    <Animated.View
+      entering={FadeInRight.delay(index * 70).duration(380)}
+      style={styles.cardWrapper}>
+      <ScalePressable onPress={handlePress} scaleTo={0.96}>
         {/* Thumbnail */}
         <ImageBackground
-          source={{ uri: item.animeImage }}
-          style={styles.thumbnail}
-          imageStyle={styles.thumbnailImage}>
-          {/* Dark overlay */}
-          <View style={styles.thumbnailOverlay} />
+          source={{ uri: thumbnail }}
+          style={styles.thumb}
+          imageStyle={styles.thumbImage}>
+          {/* subtle scrim */}
+          <View style={styles.scrim} />
 
-          {/* Play button */}
-          <View style={styles.playButton}>
-            <Play size={18} color="#0a0a0a" variant="Bold" />
+          {/* × remove — top right */}
+          <ScalePressable
+            onPress={() => onRemove(item.animeId)}
+            scaleTo={0.88}
+            style={styles.removeBtn}
+            haptic="light">
+            <CloseCircle size={20} color="#fff" variant="Bold" />
+          </ScalePressable>
+
+          {/* Bottom row: EP badge + timestamp */}
+          <View style={styles.bottomRow}>
+            <View style={styles.epBadge}>
+              <Text style={styles.epBadgeText}>EP {item.episodeNumber}</Text>
+            </View>
+            <View style={styles.timeBadge}>
+              <Text style={styles.timeBadgeText}>{progressText}</Text>
+            </View>
           </View>
 
-          {/* Episode pill */}
-          <View style={styles.epPill}>
-            <Text style={styles.epPillText}>EP {item.episodeNumber}</Text>
+          {/* YouTube-style red progress bar — no dot */}
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: progressPercent }]} />
           </View>
         </ImageBackground>
 
-        {/* Info strip below thumbnail */}
-        <View style={styles.infoStrip}>
-          <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.animeTitle}
-          </Text>
-
-          {/* Progress bar */}
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: progressWidth }]} />
-          </View>
-
-          <Text style={styles.progressLabel}>
-            {Math.round(progressPercent * 100)}% watched
-          </Text>
-        </View>
+        {/* Anime title */}
+        <Text style={styles.cardTitle} numberOfLines={1}>
+          {item.animeTitle}
+        </Text>
       </ScalePressable>
     </Animated.View>
   );
 };
 
+// ─── Row ─────────────────────────────────────────────────────────────────────
+
 const ContinueWatchingRow = () => {
   const history = useHistoryStore((s) => s.history);
+  const removeHistory = useHistoryStore((s) => s.removeHistory);
 
   const items = useMemo(
-    () =>
-      Object.values(history)
-        // most recently watched first
-        .sort((a, b) => b.timestamp - a.timestamp),
+    () => Object.values(history).sort((a, b) => b.timestamp - a.timestamp),
     [history]
   );
 
@@ -104,9 +147,11 @@ const ContinueWatchingRow = () => {
         keyExtractor={(item) => item.animeId}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.list}
-        renderItem={({ item, index }) => <ContinueWatchingCard item={item} index={index} />}
-        initialNumToRender={6}
-        maxToRenderPerBatch={8}
+        renderItem={({ item, index }) => (
+          <ContinueWatchingCard item={item} index={index} onRemove={removeHistory} />
+        )}
+        initialNumToRender={5}
+        maxToRenderPerBatch={6}
       />
     </View>
   );
@@ -127,81 +172,88 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   list: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingBottom: 4,
   },
-  card: {
+  cardWrapper: {
     width: CARD_WIDTH,
-    marginHorizontal: 6,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#1a1a1a',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
+    marginHorizontal: 5,
   },
-  thumbnail: {
+  thumb: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'space-between',
   },
-  thumbnailImage: {
+  thumbImage: {
+    borderRadius: 10,
     resizeMode: 'cover',
   },
-  thumbnailOverlay: {
+  scrim: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    borderRadius: 10,
   },
-  playButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#bef264',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  epPill: {
+  removeBtn: {
     position: 'absolute',
-    bottom: 6,
-    left: 8,
-    backgroundColor: 'rgba(7,8,6,0.78)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8,
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 99,
   },
-  epPillText: {
-    color: '#bef264',
+  bottomRow: {
+    position: 'absolute',
+    bottom: 14, // above the progress bar
+    left: 7,
+    right: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  epBadge: {
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  epBadgeText: {
+    color: '#ffffff',
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
-  infoStrip: {
-    paddingHorizontal: 10,
-    paddingTop: 9,
-    paddingBottom: 10,
-    gap: 5,
+  timeBadge: {
+    backgroundColor: 'rgba(0,0,0,0.68)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
   },
-  cardTitle: {
-    color: '#f5f5f5',
-    fontFamily: 'Salsa',
-    fontSize: 13,
-    lineHeight: 17,
+  timeBadgeText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
+  // YouTube-style red progress bar pinned to very bottom of thumbnail
   progressTrack: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: 3,
-    borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.25)',
   },
   progressFill: {
-    height: '100%',
-    borderRadius: 99,
-    backgroundColor: '#bef264',
+    height: 3,
+    backgroundColor: '#ef4444', // red-500
   },
-  progressLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+  cardTitle: {
+    marginTop: 7,
+    color: '#e8e8e8',
+    fontFamily: 'Salsa',
+    fontSize: 13,
+    paddingHorizontal: 2,
   },
 });

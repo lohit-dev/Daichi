@@ -100,15 +100,10 @@ const EpisodeListSheet = ({
             style={[styles.card, item.isFiller && styles.cardFiller]}
             scaleTo={0.97}
             onPress={() => handleEpisodePress(item)}>
-
             {/* Thumbnail */}
             <View style={styles.thumbContainer}>
               {thumbnail ? (
-                <Image
-                  source={{ uri: thumbnail }}
-                  style={styles.thumb}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: thumbnail }} style={styles.thumb} resizeMode="cover" />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]} />
               )}
@@ -162,14 +157,11 @@ const EpisodeListSheet = ({
       }}
       backgroundStyle={styles.sheetBg}
       handleIndicatorStyle={styles.sheetHandle}>
-
       <View style={styles.sheetInner}>
         {/* Header */}
         <View style={styles.sheetHeader}>
           <View>
-            <Text style={styles.sheetTitle}>
-              {type === 'sub' ? 'Subbed' : 'Dubbed'} Episodes
-            </Text>
+            <Text style={styles.sheetTitle}>{type === 'sub' ? 'Subbed' : 'Dubbed'} Episodes</Text>
             <Text style={styles.sheetSubtitle}>
               {isLoading ? 'Loading episodes…' : `${episodes.length} Episodes Available`}
             </Text>

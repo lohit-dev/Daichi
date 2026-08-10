@@ -81,6 +81,13 @@ const WatchScreen = () => {
   const { data: episodeListData } = useEpisodeList(animeId, type);
   const episodes = episodeListData ?? [];
 
+  // The episode thumbnail from the AniList streaming episodes (already merged
+  // by useEpisodeList). Used to persist a scene thumbnail in history.
+  const currentEpisodeThumbnail = useMemo(
+    () => episodes.find((ep) => ep.id === episodeId)?.image,
+    [episodes, episodeId]
+  );
+
   // -----------------------------------------------------------------------
   // Zustand selectors (only what the screen itself needs)
   // -----------------------------------------------------------------------
@@ -166,10 +173,11 @@ const WatchScreen = () => {
       animeImage: animeImage || '',
       episodeId,
       episodeNumber: episodeId,
+      episodeThumbnail: currentEpisodeThumbnail || undefined,
       progress: currentTime,
       duration: usePlayerStore.getState().duration || 0,
     });
-  }, [animeId, animeImage, animeTitle, currentTime, episodeId, saveProgress]);
+  }, [animeId, animeImage, animeTitle, currentEpisodeThumbnail, currentTime, episodeId, saveProgress]);
 
   // -----------------------------------------------------------------------
   // Server selection handler

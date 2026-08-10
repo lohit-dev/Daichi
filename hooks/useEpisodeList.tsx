@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import type { Episode } from '~/components/watch/EpisodeList';
-import { fetchAnimeEpisode } from '~/services/AnimeService';
 import { fetchAniListEpisodeImages } from '~/services/AniListService';
+import { fetchAnimeEpisode } from '~/services/AnimeService';
 import type { AnikotoEpisode } from '~/types';
 
 const mapEpisode = (episode: AnikotoEpisode): Episode => {
@@ -31,7 +32,8 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub') => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Parallel query for AniList episode thumbnails — silently returns [] on failure
+  // Parallel query for AniList episode thumbnails (Crunchyroll / HiDive scenes).
+  // Silently returns [] on failure — thumbnails are a nice-to-have.
   const imagesQuery = useQuery({
     queryKey: ['anilist', 'episode-images', animeId],
     queryFn: () => fetchAniListEpisodeImages(animeId),
@@ -39,11 +41,23 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub') => {
     staleTime: 30 * 60 * 1000,
   });
 
-  // Merge thumbnails into episodes by matching episode number
-  const data: Episode[] | undefined = episodesQuery.data?.map((ep) => {
-    const match = imagesQuery.data?.find((img) => String(img.number) === ep.number);
-    return match ? { ...ep, image: match.thumbnail } : ep;
-  });
+  // Merge thumbnails into episodes by matching episode number.
+  // Wrapped in useMemo so the merged list recomputes when EITHER query resolves.
+  const data: Episode[] | undefined = useMemo(() => {
+    if (!episodesQuery.data) return undefined;
+
+    const imageMap = new Map<number, string>();
+    for (const img of imagesQuery.data ?? []) {
+      // AniList numbers are floats (e.g. 130.0); normalise to integer key
+      imageMap.set(Math.round(img.number), img.thumbnail);
+    }
+
+    return episodesQuery.data.map((ep) => {
+      const epNum = Math.round(parseFloat(ep.number));
+      const thumbnail = imageMap.get(epNum);
+      return thumbnail ? { ...ep, image: thumbnail } : ep;
+    });
+  }, [episodesQuery.data, imagesQuery.data]);
 
   return {
     data,
