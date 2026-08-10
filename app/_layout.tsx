@@ -72,7 +72,7 @@ export default function RootLayout() {
   }
 
   const linking = {
-    prefixes: ['animax://', 'https://animax.app'],
+    prefixes: ['daichi://', 'https://daichi.app'],
     config: {
       screens: {
         index: '',

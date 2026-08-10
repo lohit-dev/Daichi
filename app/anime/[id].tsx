@@ -135,10 +135,10 @@ const AnimeDetails = () => {
     if (!animeData) return;
 
     try {
-      const deepLink = `animax://anime/${animeData.id}`;
+      const deepLink = `daichi://anime/${animeData.id}`;
       await RNShare.share({
         title: `Share ${animeData.title}`,
-        message: `Watch ${animeData.title} on Animax.\n${deepLink}`,
+        message: `Watch ${animeData.title} on Daichi.\n${deepLink}`,
         url: deepLink,
       });
     } catch (shareError) {

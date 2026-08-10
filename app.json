@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "animax",
-    "slug": "animax",
+    "name": "Daichi",
+    "slug": "daichi",
     "version": "1.1.0",
-    "scheme": "animax",
+    "scheme": "daichi",
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -32,8 +32,8 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.king-grey.animax",
-      "associatedDomains": ["applinks:animax.app"],
+      "bundleIdentifier": "com.king-grey.daichi",
+      "associatedDomains": ["applinks:daichi.app"],
       "infoPlist": {
         "UIStatusBarHidden": false,
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -45,14 +45,14 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0e0f0d"
       },
-      "package": "com.king_grey.animax",
+      "package": "com.king_grey.daichi",
       "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
       "intentFilters": [
         {
           "action": "VIEW",
           "data": [
             {
-              "scheme": "animax"
+              "scheme": "daichi"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
@@ -63,7 +63,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "animax.app"
+              "host": "daichi.app"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
