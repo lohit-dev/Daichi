@@ -87,7 +87,7 @@ const WatchScreen = () => {
     handleVideoTap,
   } = usePlayerControls(seekTo, handleExit);
 
-  const { data: episodeListData } = useEpisodeList(animeId, type);
+  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
   const episodes = episodeListData ?? [];
 
   // The episode thumbnail from the AniList streaming episodes (already merged

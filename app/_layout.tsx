@@ -3,8 +3,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 // import * as Linking from 'expo-linking';
 import { NavigationBar } from 'expo-navigation-bar';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -45,6 +46,7 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
   const [loaded] = useFonts({
     'Salsa-Regular': require('../assets/fonts/Salsa-Regular.ttf'),
   });
@@ -67,12 +69,22 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  useEffect(() => {
+    // The trailer and episode player manage their own orientation. Every other
+    // route is intentionally portrait so returning from playback is predictable.
+    if (pathname.startsWith('/trailer/') || pathname.startsWith('/anime/watch/')) return;
+
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {
+      // Orientation is unavailable in a few development environments.
+    });
+  }, [pathname]);
+
   if (!loaded) {
     return null;
   }
 
   const linking = {
-    prefixes: ['animax://', 'https://animax.app'],
+    prefixes: ['daichi://', 'https://daichi.app'],
     config: {
       screens: {
         index: '',
@@ -104,6 +116,7 @@ export default function RootLayout() {
                   />
                   <Stack.Screen name="browse/[category]" options={{ headerShown: false }} />
                   <Stack.Screen name="browse/list" options={{ headerShown: false }} />
+                  <Stack.Screen name="trailer/[videoId]" options={{ headerShown: false }} />
                 </Stack>
               </ThemeProvider>
             </ToastProvider>

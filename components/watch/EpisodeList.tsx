@@ -27,7 +27,6 @@ const ROW_HEIGHT = 84;
 const EpisodeList = ({
   episodes,
   currentEpisodeId,
-  fallbackImage,
   onSelectEpisode,
   ListHeaderComponent,
 }: EpisodeListProps) => {
@@ -129,10 +128,9 @@ const EpisodeList = ({
                 overflow: 'hidden',
                 backgroundColor: COLORS.bg,
               }}>
-              <Image
-                source={{ uri: item.image || fallbackImage }}
-                style={{ width: '100%', height: '100%' }}
-              />
+              {item.image ? (
+                <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
+              ) : null}
               <View
                 style={{
                   position: 'absolute',

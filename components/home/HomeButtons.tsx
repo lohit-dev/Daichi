@@ -1,4 +1,4 @@
-import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import { Add, Play, TickCircle } from 'iconsax-react-native';
 import React from 'react';
 import { Text } from 'react-native';
@@ -14,6 +14,7 @@ type HomeButtonsProps = {
 };
 
 const HomeButtons = ({ anime }: HomeButtonsProps) => {
+  const router = useRouter();
   const toast = useToast();
   const savedAnimes = useSavedAnimesStore((state) => state.animes);
   const addAnime = useSavedAnimesStore((state) => state.addAnime);
@@ -22,7 +23,7 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
     anime && savedAnimes.some((savedAnime) => savedAnime.slug === anime.slug)
   );
 
-  const handlePlayTrailer = async () => {
+  const handlePlayTrailer = () => {
     if (!anime?.trailer?.id || anime.trailer.site?.toLowerCase() !== 'youtube') {
       toast.show('A trailer is not available for this title yet.', {
         type: 'normal',
@@ -31,14 +32,13 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
       return;
     }
 
-    try {
-      await Linking.openURL(`https://www.youtube.com/watch?v=${anime.trailer.id}`);
-    } catch {
-      toast.show('Could not open the trailer. Please try again.', {
-        type: 'danger',
-        placement: 'bottom',
-      });
-    }
+    router.push({
+      pathname: '/trailer/[videoId]',
+      params: {
+        videoId: anime.trailer.id,
+        title: anime.title,
+      },
+    });
   };
 
   const handleLibrary = () => {
