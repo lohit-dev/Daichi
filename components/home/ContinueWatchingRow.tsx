@@ -8,7 +8,8 @@ import Animated, { FadeInRight } from 'react-native-reanimated';
 import { useHistoryStore, HistoryItem } from '~/app/_store/useHistoryStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
-import { hp, wp, formatTime } from '~/helpers/common';
+import { formatTime, wp } from '~/helpers/common';
+import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
 import { fetchAniListEpisodeImages } from '~/services/AniListService';
 
 // ─── Card dimensions ─────────────────────────────────────────────────────────
@@ -38,9 +39,13 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
     if (item.episodeThumbnail) return item.episodeThumbnail;
 
     if (episodeImages?.length) {
-      const epNum = Math.round(parseFloat(item.episodeNumber));
-      const map = new Map(episodeImages.map((img) => [Math.round(img.number), img.thumbnail]));
-      const found = map.get(epNum);
+      const map = new Map(
+        episodeImages.flatMap((image) => {
+          const key = getEpisodeNumberKey(image.number);
+          return key ? [[key, image.thumbnail] as const] : [];
+        })
+      );
+      const found = map.get(getEpisodeNumberKey(item.episodeNumber) || '');
       if (found) return found;
     }
 

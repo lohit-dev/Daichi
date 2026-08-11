@@ -47,7 +47,13 @@ const EpisodeListSheet = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
-  const { data: episodeData, isLoading, error } = useEpisodeList(animeId, type, fallbackImage);
+  const {
+    data: episodeData,
+    isLoading,
+    error,
+    loadMoreImages,
+    hasMoreImages,
+  } = useEpisodeList(animeId, type, fallbackImage);
 
   const episodes: Episode[] = useMemo(() => {
     if (!episodeData) return [];
@@ -91,7 +97,9 @@ const EpisodeListSheet = ({
 
   const renderEpisodeCard = useCallback(
     ({ item, index }: { item: Episode; index: number }) => {
-      const thumbnail = item.image || fallbackImage;
+      // The hook applies the cover image only after Kitsu and AniList have both
+      // had a chance to provide a scene thumbnail. Until then, stay neutral.
+      const thumbnail = item.image;
 
       return (
         <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(280)}>
@@ -220,6 +228,8 @@ const EpisodeListSheet = ({
               initialNumToRender={12}
               maxToRenderPerBatch={10}
               windowSize={5}
+              onEndReached={hasMoreImages ? loadMoreImages : undefined}
+              onEndReachedThreshold={0.65}
             />
           )}
         </View>

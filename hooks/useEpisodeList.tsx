@@ -1,17 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 
 import type { Episode } from '~/components/watch/EpisodeList';
-import { fetchAniListAnimeById, fetchEpisodeImagesForAnime } from '~/services/AniListService';
+import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
+import {
+  fetchAniListAnimeById,
+  fetchAniListStreamingEpisodeImages,
+  fetchKitsuEpisodeImagePage,
+  resolveKitsuAnimeIdFromMal,
+} from '~/services/AniListService';
 import { fetchAnimeEpisode } from '~/services/AnimeService';
 import type { AnikotoEpisode } from '~/types';
 
 const mapEpisode = (episode: AnikotoEpisode): Episode => {
-  const number = `${Number.parseInt(episode.episode, 10) || 0}`;
+  const number = getEpisodeNumberKey(episode.episode) || episode.episode;
 
   return {
-    // The streaming endpoint consumes the episode number, so the player and
-    // picker intentionally use it as their shared route identity.
     id: number,
     number,
     title: episode.title || `Episode ${number}`,
@@ -32,57 +36,98 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackIm
     staleTime: 5 * 60 * 1000,
   });
 
-  // Parallel query for AniList episode thumbnails (Crunchyroll / HiDive scenes).
-  // Silently returns [] on failure — thumbnails are a nice-to-have.
-  const imagesQuery = useQuery({
-    queryKey: ['anilist', 'episode-images', animeId, 'kitsu-priority-v2'],
+  // Resolve Kitsu first. Its artwork is more complete for long-running shows
+  // such as One Piece, while AniList is only used to fill missing frames.
+  const animeMetadataQuery = useQuery({
+    queryKey: ['anilist', 'anime-mal-id', animeId],
     queryFn: async () => {
       try {
-        const anime = await fetchAniListAnimeById(animeId);
-        return fetchEpisodeImagesForAnime(animeId, anime.malId);
+        return await fetchAniListAnimeById(animeId);
       } catch {
-        return fetchEpisodeImagesForAnime(animeId);
+        return null;
       }
     },
     enabled: !!animeId,
     staleTime: 30 * 60 * 1000,
+  });
+
+  const malId = animeMetadataQuery.data?.malId;
+  const kitsuAnimeQuery = useQuery({
+    queryKey: ['kitsu', 'anime-id', malId],
+    queryFn: () => resolveKitsuAnimeIdFromMal(malId!),
+    enabled: animeMetadataQuery.isSuccess && Boolean(malId),
+    staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+  });
+
+  // Kitsu is loaded one page at a time. Page one appears immediately; later
+  // pages are requested only when the user scrolls toward them.
+  const kitsuImagesQuery = useInfiniteQuery({
+    queryKey: ['kitsu', 'episode-images', kitsuAnimeQuery.data],
+    queryFn: ({ pageParam }) => fetchKitsuEpisodeImagePage(kitsuAnimeQuery.data!, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset,
+    enabled: Boolean(kitsuAnimeQuery.data),
+    staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
 
-  // Merge thumbnails into episodes by matching episode number.
-  // Wrapped in useMemo so the merged list recomputes when EITHER query resolves.
+  const canFetchAniListFallback =
+    animeMetadataQuery.isSuccess &&
+    (!malId || kitsuAnimeQuery.isSuccess) &&
+    (!kitsuAnimeQuery.data || kitsuImagesQuery.isSuccess);
+  const anilistImagesQuery = useQuery({
+    queryKey: ['anilist', 'streaming-episode-images', animeId],
+    queryFn: () => fetchAniListStreamingEpisodeImages(animeId),
+    enabled: canFetchAniListFallback && !!animeId,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
   const data: Episode[] | undefined = useMemo(() => {
     if (!episodesQuery.data) return undefined;
 
-    const imageMap = new Map<number, string>();
-    for (const img of imagesQuery.data ?? []) {
-      imageMap.set(Math.round(img.number), img.thumbnail);
+    const imageMap = new Map<string, string>();
+    for (const page of kitsuImagesQuery.data?.pages ?? []) {
+      for (const image of page.images) {
+        const key = getEpisodeNumberKey(image.number);
+        if (key) imageMap.set(key, image.thumbnail);
+      }
+    }
+    for (const image of anilistImagesQuery.data ?? []) {
+      const key = getEpisodeNumberKey(image.number);
+      if (key && !imageMap.has(key)) imageMap.set(key, image.thumbnail);
     }
 
-    console.log(
-      '[episode-list-merge-debug] imageMap size',
-      imageMap.size,
-      'episodes',
-      episodesQuery.data.length
-    );
-    console.log(
-      '[episode-list-merge-debug] first 5 mapped keys',
-      Array.from(imageMap.entries()).slice(0, 5)
-    );
-
-    return episodesQuery.data.map((ep) => {
-      const epNum = Math.round(parseFloat(ep.number));
-      const thumbnail = imageMap.get(epNum);
-      if (thumbnail) {
-        console.log('[episode-list-merge-debug] applied thumbnail for ep', ep.number, thumbnail);
-      }
-      return thumbnail ? { ...ep, image: thumbnail } : { ...ep, image: fallbackImage };
+    const mayUseCoverFallback = anilistImagesQuery.isSuccess;
+    return episodesQuery.data.map((episode) => {
+      const thumbnail = imageMap.get(getEpisodeNumberKey(episode.number) || '');
+      if (thumbnail) return { ...episode, image: thumbnail };
+      return mayUseCoverFallback ? { ...episode, image: fallbackImage } : episode;
     });
-  }, [episodesQuery.data, imagesQuery.data, fallbackImage]);
+  }, [
+    anilistImagesQuery.data,
+    anilistImagesQuery.isSuccess,
+    episodesQuery.data,
+    fallbackImage,
+    kitsuImagesQuery.data,
+  ]);
+
+  const loadMoreImages = useCallback(() => {
+    if (kitsuImagesQuery.hasNextPage && !kitsuImagesQuery.isFetchingNextPage) {
+      kitsuImagesQuery.fetchNextPage();
+    }
+  }, [
+    kitsuImagesQuery.fetchNextPage,
+    kitsuImagesQuery.hasNextPage,
+    kitsuImagesQuery.isFetchingNextPage,
+  ]);
 
   return {
     data,
     isLoading: episodesQuery.isLoading,
     error: episodesQuery.error,
+    loadMoreImages,
+    hasMoreImages: Boolean(kitsuImagesQuery.hasNextPage),
   };
 };
