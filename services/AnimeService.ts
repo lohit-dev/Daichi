@@ -108,9 +108,25 @@ export const fetchAnimeStreamingLink = async (
   type: 'sub' | 'dub' = 'sub'
 ): Promise<AnikotoStreamResponse> => {
   const store = useProviderMappingStore.getState();
-  const mapping = store.getMapping(animeId);
+  let mapping = store.getMapping(animeId);
+
+  console.log('[AnimeService] fetchAnimeStreamingLink', {
+    animeId,
+    providerEpisodeId,
+    animeTitle,
+    hasMapping: !!mapping,
+  });
+
+  if (!mapping) {
+    if (animeTitle) {
+      console.log('[AnimeService] Mapping missing but title provided, resolving dynamically...');
+      await resolveProviderAnimeId(animeId, animeTitle);
+      mapping = store.getMapping(animeId);
+    }
+  }
 
   if (!mapping || !animeTitle) {
+    console.warn('[AnimeService] Falling back to legacy: Missing mapping or title');
     return fetchAnimeStreamingLinkLegacy(animeId, providerEpisodeId);
   }
 
@@ -120,6 +136,7 @@ export const fetchAnimeStreamingLink = async (
     const sources = await provider.getStreamSources(providerEpisodeId, { dub: type === 'dub' });
 
     if (!sources.length) {
+      console.warn('[AnimeService] Falling back to legacy: No sources returned by provider');
       return fetchAnimeStreamingLinkLegacy(animeId, providerEpisodeId);
     }
 
@@ -152,7 +169,8 @@ export const fetchAnimeStreamingLink = async (
         })),
       },
     };
-  } catch {
+  } catch (error) {
+    console.error('[AnimeService] Provider getStreamSources threw an error:', error);
     return fetchAnimeStreamingLinkLegacy(animeId, providerEpisodeId);
   }
 };
