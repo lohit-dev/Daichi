@@ -8,6 +8,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+
 import {
   StreamingProvider,
   ProviderSearchResult,
