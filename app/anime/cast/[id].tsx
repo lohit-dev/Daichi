@@ -199,8 +199,8 @@ const styles = StyleSheet.create({
   },
   headerCopy: { flex: 1, alignItems: 'center', marginHorizontal: 10 },
   headerSpacer: { width: 40 },
-  title: { color: '#fff', fontFamily: 'Salsa', fontSize: 25, fontWeight: '700' },
-  subtitle: { color: 'rgba(255,255,255,0.45)', fontFamily: 'Salsa', fontSize: 12, marginTop: 2 },
+  title: { color: '#fff', fontFamily: 'Salsa-Regular', fontSize: 25, fontWeight: '700' },
+  subtitle: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 2 },
   listContent: { padding: 14, paddingBottom: 110, gap: 14 },
   footerLoader: { paddingVertical: 18 },
   castCard: {
@@ -216,7 +216,6 @@ const styles = StyleSheet.create({
   personColumn: { flex: 1, alignItems: 'center' },
   personType: {
     color: 'rgba(163,230,53,0.7)',
-    fontFamily: 'Salsa',
     fontSize: 9,
     letterSpacing: 1,
     marginBottom: 7,
@@ -225,13 +224,13 @@ const styles = StyleSheet.create({
   imagePlaceholder: { borderWidth: 1, borderColor: 'rgba(163,230,53,0.18)' },
   personName: {
     color: '#fff',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: 8,
   },
-  personRole: { color: '#a3e635', fontFamily: 'Salsa', fontSize: 11, marginTop: 3 },
+  personRole: { color: '#a3e635', fontSize: 11, marginTop: 3 },
   connector: {
     width: 28,
     height: 28,
@@ -248,10 +247,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a',
     padding: 24,
   },
-  mutedText: { color: 'rgba(255,255,255,0.55)', fontFamily: 'Salsa', marginTop: 12 },
+  mutedText: { color: 'rgba(255,255,255,0.55)', marginTop: 12 },
   emptyText: {
     color: 'rgba(255,255,255,0.55)',
-    fontFamily: 'Salsa',
     fontSize: 16,
     textAlign: 'center',
   },
@@ -267,7 +265,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  errorText: { color: '#fff', fontFamily: 'Salsa', fontSize: 17, marginTop: 8 },
+  errorText: { color: '#fff', fontSize: 17, marginTop: 8 },
   retryButton: {
     backgroundColor: '#bef264',
     borderRadius: 12,
@@ -275,5 +273,5 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     marginTop: 18,
   },
-  retryText: { color: '#182008', fontFamily: 'Salsa', fontWeight: '700' },
+  retryText: { color: '#182008', fontWeight: '700' },
 });

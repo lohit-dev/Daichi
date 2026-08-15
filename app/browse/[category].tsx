@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: '#ffffff',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 22,
     marginHorizontal: 8,
   },
@@ -207,7 +207,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: 'rgba(255,255,255,0.7)',
-    fontFamily: 'Salsa',
     fontSize: 15,
     textAlign: 'center',
     paddingHorizontal: 24,
@@ -220,7 +219,6 @@ const styles = StyleSheet.create({
   },
   retryText: {
     color: '#182008',
-    fontFamily: 'Salsa',
     fontSize: 15,
     fontWeight: '700',
   },

@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#ffffff',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 24,
     fontWeight: '600',
   },
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     marginTop: 7,
     color: '#e8e8e8',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 13,
     paddingHorizontal: 2,
   },

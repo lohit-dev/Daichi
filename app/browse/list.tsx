@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     color: '#ffffff',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 22,
     marginHorizontal: 8,
   },
@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: 'rgba(255,255,255,0.5)',
-    fontFamily: 'Salsa',
     fontSize: 16,
   },
 });

@@ -51,6 +51,6 @@ const styles = StyleSheet.create({
     right: 10,
     bottom: 10,
   },
-  title: { color: '#fff', fontFamily: 'Salsa', fontSize: 14, fontWeight: '700' },
-  role: { color: '#a3e635', fontFamily: 'Salsa', fontSize: 10, marginTop: 3 },
+  title: { color: '#fff', fontFamily: 'Salsa-Regular', fontSize: 14, fontWeight: '700' },
+  role: { color: '#a3e635', fontSize: 10, marginTop: 3 },
 });

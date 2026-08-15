@@ -417,6 +417,7 @@ const AnimeDetails = () => {
 
       <EpisodeListSheet
         animeId={animeData.id}
+        malId={animeData.malId}
         fallbackImage={animeData.image}
         bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
         enableBackdropPress
@@ -545,6 +546,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#ffffff',
+    fontFamily: 'Salsa-Regular',
     fontSize: 28,
     fontWeight: '700',
     lineHeight: 33,
@@ -647,6 +649,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     color: '#ffffff',
+    fontFamily: 'Salsa-Regular',
     fontSize: 27,
     fontWeight: '700',
     letterSpacing: 0.2,

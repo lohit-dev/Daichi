@@ -845,7 +845,10 @@ export const resolveKitsuAnimeIdFromMal = async (
 ): Promise<string | null> => {
   if (!malId || Number(malId) <= 0) return null;
 
-  const url = `https://kitsu.io/api/edge/mappings?filter[externalSite]=myanimelist%2Fanime&filter[externalId]=${encodeURIComponent(String(malId))}&include=item`;
+  const url =
+    `https://kitsu.io/api/edge/mappings?` +
+    `filter%5BexternalSite%5D=myanimelist%2Fanime&` +
+    `filter%5BexternalId%5D=${encodeURIComponent(String(malId))}&include=item`;
 
   try {
     const response = await fetch(url, {
@@ -928,7 +931,8 @@ export const fetchKitsuEpisodeImagePage = async (
 ): Promise<KitsuEpisodeImagePage> => {
   try {
     const response = await fetch(
-      `https://kitsu.io/api/edge/anime/${encodeURIComponent(kitsuAnimeId)}/episodes?page[limit]=${KITSU_EPISODE_PAGE_LIMIT}&page[offset]=${offset}&sort=number`,
+      `https://kitsu.io/api/edge/anime/${encodeURIComponent(kitsuAnimeId)}/episodes?` +
+        `page%5Blimit%5D=${KITSU_EPISODE_PAGE_LIMIT}&page%5Boffset%5D=${offset}&sort=number`,
       { headers: { Accept: 'application/vnd.api+json' } }
     );
 

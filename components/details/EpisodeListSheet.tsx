@@ -19,6 +19,7 @@ type Episode = {
 
 type EpisodeListSheetProps = {
   animeId: string;
+  malId?: number | null;
   type: 'sub' | 'dub';
   fallbackImage?: string;
   bottomSheetRef: RefObject<BottomSheetModal>;
@@ -35,6 +36,7 @@ const CARD_IMG_HEIGHT = 70;
 
 const EpisodeListSheet = ({
   animeId,
+  malId,
   type,
   fallbackImage,
   bottomSheetRef,
@@ -54,7 +56,7 @@ const EpisodeListSheet = ({
     error,
     loadMoreImages,
     hasMoreImages,
-  } = useEpisodeList(animeId, type, fallbackImage);
+  } = useEpisodeList(animeId, type, fallbackImage, malId);
 
   const episodes: Episode[] = useMemo(() => {
     if (!episodeData) return [];
@@ -261,13 +263,12 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: '#ffffff',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 22,
     fontWeight: '700',
   },
   sheetSubtitle: {
     color: 'rgba(255,255,255,0.45)',
-    fontFamily: 'Salsa',
     fontSize: 13,
     marginTop: 2,
   },
@@ -293,7 +294,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: '#ffffff',
-    fontFamily: 'Salsa',
     fontSize: 14,
   },
   sortBtn: {
@@ -309,7 +309,6 @@ const styles = StyleSheet.create({
   },
   sortLabel: {
     color: '#a3e635',
-    fontFamily: 'Salsa',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -380,7 +379,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: '#f0f0ee',
-    fontFamily: 'Salsa',
+    fontFamily: 'Salsa-Regular',
     fontSize: 13.5,
     lineHeight: 19,
   },
@@ -413,19 +412,16 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: 'rgba(255,255,255,0.45)',
-    fontFamily: 'Salsa',
     fontSize: 13,
     marginTop: 10,
   },
   errorText: {
     color: '#f87171',
-    fontFamily: 'Salsa',
     fontSize: 15,
     textAlign: 'center',
   },
   emptyText: {
     color: 'rgba(255,255,255,0.45)',
-    fontFamily: 'Salsa',
     fontSize: 15,
     textAlign: 'center',
   },
