@@ -8,7 +8,7 @@ import Video from 'react-native-video';
 import { useHistoryStore } from '~/app/_store/useHistoryStore';
 import { usePlayerStore } from '~/app/_store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
-import EpisodeList from '~/components/watch/EpisodeList';
+import { EpisodeList, type Episode } from '~/components/watch/EpisodeList';
 import PlayerOverlay from '~/components/watch/PlayerOverlay';
 import SettingsSheet from '~/components/watch/SettingsSheet';
 import UpNextCard from '~/components/watch/UpNextCard';
@@ -20,13 +20,17 @@ import { useVideoPlayer } from '~/hooks/useVideoPlayer';
 
 const WatchScreen = () => {
   const router = useRouter();
-  const { episodeId, animeId, type, animeTitle, animeImage } = useLocalSearchParams<{
-    episodeId: string;
-    animeId: string;
-    type: 'sub' | 'dub';
-    animeTitle: string;
-    animeImage: string;
-  }>();
+  const { episodeId, providerEpisodeId, animeId, type, animeTitle, animeImage } =
+    useLocalSearchParams<{
+      episodeId: string;
+      providerEpisodeId: string;
+      animeId: string;
+      type: 'sub' | 'dub';
+      animeTitle: string;
+      animeImage: string;
+    }>();
+
+  const actualEpisodeId = providerEpisodeId || episodeId;
 
   // Reset store on mount, clean up on unmount
   useEffect(() => {
@@ -66,7 +70,7 @@ const WatchScreen = () => {
     handleVideoTracks,
     handleEnd,
     seekTo,
-  } = useVideoPlayer(animeId, episodeId, type);
+  } = useVideoPlayer(animeId, actualEpisodeId, type, animeTitle);
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {
@@ -87,7 +91,7 @@ const WatchScreen = () => {
     handleVideoTap,
   } = usePlayerControls(seekTo, handleExit);
 
-  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
+  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage, animeTitle);
   const episodes = episodeListData ?? [];
 
   // The episode thumbnail from the AniList streaming episodes (already merged
@@ -130,12 +134,13 @@ const WatchScreen = () => {
   }, [episodes, episodeId]);
 
   const goToEpisode = useCallback(
-    (target: { id: string } | null) => {
+    (target: { id: string; providerId?: string } | null) => {
       if (!target) return;
       router.replace({
         pathname: '/anime/watch/[episodeId]',
         params: {
           episodeId: target.id,
+          providerEpisodeId: target.providerId || target.id,
           animeId,
           type,
           animeTitle,
@@ -320,7 +325,7 @@ const WatchScreen = () => {
           episodes={episodes}
           currentEpisodeId={episodeId}
           fallbackImage={animeImage}
-          onSelectEpisode={(ep) => goToEpisode(ep)}
+          onSelectEpisode={(ep: Episode) => goToEpisode(ep)}
           ListHeaderComponent={
             <UpNextCard
               episode={nextEpisode}

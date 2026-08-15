@@ -426,11 +426,12 @@ const AnimeDetails = () => {
         enableBackdropPress
         enablePanDownToClose
         onDismiss={() => setIsEpisodeSheetOpen(false)}
-        onEpisodePress={(episodeId: string) =>
+        onEpisodePress={(episodeId: string, providerEpisodeId?: string) =>
           nav.push({
             pathname: '/anime/watch/[episodeId]',
             params: {
               episodeId,
+              providerEpisodeId: providerEpisodeId || episodeId,
               animeId: animeData.id,
               type: selectedType,
               animeTitle: animeData.title,

@@ -13,10 +13,14 @@ import {
 import { fetchAnimeStreamingLink } from '~/services/AnimeService';
 import { AnikotoStreamResponse, SubtitleTrack } from '~/types';
 
-export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' | 'dub') => {
+export const useVideoPlayer = (
+  animeId: string,
+  providerEpisodeId: string,
+  type: 'sub' | 'dub',
+  animeTitle?: string
+) => {
   const videoRef = useRef<any>(null);
 
-  // Zustand selectors (granular to avoid unnecessary renders)
   const selectedServerIndex = usePlayerStore((s) => s.selectedServerIndex);
   const selectedQualityHeight = usePlayerStore((s) => s.selectedQualityHeight);
   const selectedSubtitleIndex = usePlayerStore((s) => s.selectedSubtitleIndex);
@@ -25,7 +29,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
   const resizeModeIndex = usePlayerStore((s) => s.resizeModeIndex);
   const duration = usePlayerStore((s) => s.duration);
 
-  // Zustand actions
   const setCurrentTime = usePlayerStore((s) => s.setCurrentTime);
   const setIsPlaying = usePlayerStore((s) => s.setIsPlaying);
   const setIsBuffering = usePlayerStore((s) => s.setIsBuffering);
@@ -36,18 +39,14 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
   const setReadySubtitleKey = usePlayerStore((s) => s.setReadySubtitleKey);
   const handleSourceLoaded = usePlayerStore((s) => s.handleSourceLoaded);
 
-  // -----------------------------------------------------------------------
-  // Streaming data
-  // -----------------------------------------------------------------------
-
   const {
     data: streamingData,
     isLoading,
     error: queryError,
   } = useQuery<AnikotoStreamResponse>({
-    queryKey: ['streaming', animeId, episodeId, type],
-    queryFn: () => fetchAnimeStreamingLink(animeId, episodeId),
-    enabled: !!animeId && !!episodeId,
+    queryKey: ['streaming', animeId, providerEpisodeId, type],
+    queryFn: () => fetchAnimeStreamingLink(animeId, providerEpisodeId, animeTitle, type),
+    enabled: !!animeId && !!providerEpisodeId,
     staleTime: 0,
   });
 
@@ -66,23 +65,14 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
 
   const videoSource = primaryServer?.m3u8Url;
   const referer = primaryServer?.referer;
-  // Two server entries can point at the same m3u8 URL. Include the selected
-  // server in this identity so switching entries always reloads the native
-  // source and completes the preserved-seek handoff.
   const videoSourceKey = `${activeServerIndex}:${videoSource ?? ''}:${referer ?? ''}`;
-
-  // -----------------------------------------------------------------------
-  // HLS quality ladder — parse master.m3u8 directly
-  // -----------------------------------------------------------------------
 
   useEffect(() => {
     if (!videoSource || !referer) {
       setAvailableQualities([]);
       return;
     }
-
     let cancelled = false;
-
     const parseM3u8Qualities = async () => {
       try {
         const res = await fetch(videoSource, {
@@ -91,8 +81,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
         if (!res.ok || cancelled) return;
         const text = await res.text();
         if (cancelled) return;
-
-        // Each EXT-X-STREAM-INF line may carry RESOLUTION=WxH
         const qualities: { height: number; label: string }[] = [];
         const lines = text.split('\n');
         for (const line of lines) {
@@ -104,24 +92,17 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
             }
           }
         }
-
         qualities.sort((a, b) => b.height - a.height);
         setAvailableQualities(qualities);
       } catch {
-        // silently fall back to Auto-only
         setAvailableQualities([]);
       }
     };
-
     parseM3u8Qualities();
     return () => {
       cancelled = true;
     };
   }, [videoSource, referer, setAvailableQualities]);
-
-  // -----------------------------------------------------------------------
-  // Subtitle tracks
-  // -----------------------------------------------------------------------
 
   const validSubtitleTracks: SubtitleTrack[] = useMemo(() => {
     const raw = primaryServer?.subtitles || [];
@@ -134,7 +115,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
       }));
   }, [primaryServer]);
 
-  // Reset subtitle selection when server changes
   useEffect(() => {
     const index = getPreferredSubtitleIndex(validSubtitleTracks);
     setSelectedSubtitleIndex(index);
@@ -148,10 +128,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
     setReadySubtitleKey,
     setSubtitleStatus,
   ]);
-
-  // -----------------------------------------------------------------------
-  // Subtitle download
-  // -----------------------------------------------------------------------
 
   const selectedSubtitleUri =
     selectedSubtitleIndex !== null ? validSubtitleTracks[selectedSubtitleIndex]?.uri : undefined;
@@ -167,9 +143,7 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
       setReadySubtitleKey(subtitleKey);
       return;
     }
-
     let isMounted = true;
-
     const downloadWithRetry = async () => {
       for (let attempt = 1; attempt <= MAX_SUBTITLE_RETRIES; attempt += 1) {
         try {
@@ -205,7 +179,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
         }
       }
     };
-
     downloadWithRetry();
     return () => {
       isMounted = false;
@@ -219,10 +192,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
     setReadySubtitleKey,
     toast,
   ]);
-
-  // -----------------------------------------------------------------------
-  // Video source object (memoized)
-  // -----------------------------------------------------------------------
 
   const videoSourceObj = useMemo(
     () => ({
@@ -241,10 +210,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
   );
 
   const resizeMode = RESIZE_MODES[resizeModeIndex];
-
-  // -----------------------------------------------------------------------
-  // Video event handlers
-  // -----------------------------------------------------------------------
 
   const handleProgress = useCallback(
     (data: any) => {
@@ -283,7 +248,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
     [setIsBuffering]
   );
 
-  // kept as a no-op for the onVideoTracks prop (native tracks are unreliable for HLS ladders)
   const handleVideoTracks = useCallback(() => {}, []);
 
   const handleEnd = useCallback(() => {
@@ -317,8 +281,6 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
     validSubtitleTracks,
     isSubtitleReady,
     subtitleKey,
-
-    // Handlers
     handleProgress,
     handleLoad,
     handleError,

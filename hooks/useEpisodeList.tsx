@@ -20,14 +20,20 @@ const mapEpisode = (episode: AnikotoEpisode): Episode => {
     number,
     title: episode.title || `Episode ${number}`,
     image: undefined,
+    providerId: episode.serversId,
   };
 };
 
-export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackImage?: string) => {
+export const useEpisodeList = (
+  animeId: string,
+  type?: 'sub' | 'dub',
+  fallbackImage?: string,
+  animeTitle?: string
+) => {
   const episodesQuery = useQuery<Episode[]>({
-    queryKey: ['anikoto', 'episodes', animeId, type],
+    queryKey: ['provider', 'episodes', animeId, type],
     queryFn: async () => {
-      const episodes = await fetchAnimeEpisode(animeId);
+      const episodes = await fetchAnimeEpisode(animeId, animeTitle);
       return episodes
         .filter((episode) => (type ? Boolean(episode[type]) : episode.sub || episode.dub))
         .map(mapEpisode);
@@ -36,8 +42,6 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackIm
     staleTime: 5 * 60 * 1000,
   });
 
-  // Resolve Kitsu first. Its artwork is more complete for long-running shows
-  // such as One Piece, while AniList is only used to fill missing frames.
   const animeMetadataQuery = useQuery({
     queryKey: ['anilist', 'anime-mal-id', animeId],
     queryFn: async () => {
@@ -60,8 +64,6 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackIm
     gcTime: 24 * 60 * 60 * 1000,
   });
 
-  // Kitsu is loaded one page at a time. Page one appears immediately; later
-  // pages are requested only when the user scrolls toward them.
   const kitsuImagesQuery = useInfiniteQuery({
     queryKey: ['kitsu', 'episode-images', kitsuAnimeQuery.data],
     queryFn: ({ pageParam }) => fetchKitsuEpisodeImagePage(kitsuAnimeQuery.data!, pageParam),
