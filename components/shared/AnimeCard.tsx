@@ -47,8 +47,7 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
           <View className="overflow-hidden rounded-2xl">
             <AnimatedImageBackground
               source={{ uri: item.image }}
-              style={[styles.Image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}
-              sharedTransitionTag="image">
+              style={[styles.Image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}>
               {detailsEnabled && (
                 <View className="flex-1 items-end justify-start p-2">
                   <View className="flex-row items-center justify-center space-x-1 rounded-full bg-lime-200 px-2 py-[2]">

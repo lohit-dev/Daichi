@@ -20,6 +20,10 @@ export const useVideoPlayer = (
   animeSlug?: string
 ) => {
   const videoRef = useRef<any>(null);
+  // Older history entries may contain the episode number here because the
+  // episode slug was previously read from Anikoto's `slug` field. Only use a
+  // real provider anime slug; otherwise let the current ID resolve normally.
+  const providerSlug = animeSlug && !/^\d+$/.test(animeSlug) ? animeSlug : undefined;
 
   // Zustand selectors (granular to avoid unnecessary renders)
   const selectedServerIndex = usePlayerStore((s) => s.selectedServerIndex);
@@ -50,8 +54,8 @@ export const useVideoPlayer = (
     isLoading,
     error: queryError,
   } = useQuery<AnikotoStreamResponse>({
-    queryKey: ['streaming', animeSlug || animeId, episodeId, type],
-    queryFn: () => fetchAnimeStreamingLink(animeSlug || animeId, episodeId),
+    queryKey: ['streaming', providerSlug || animeId, episodeId, type],
+    queryFn: () => fetchAnimeStreamingLink(providerSlug || animeId, episodeId),
     enabled: !!animeId && !!episodeId,
     staleTime: 0,
   });

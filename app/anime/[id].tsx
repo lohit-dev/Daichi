@@ -1,13 +1,13 @@
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, Heart, Share } from 'iconsax-react-native';
 import LottieView from 'lottie-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   BackHandler,
-  Image,
   ScrollView,
   Share as RNShare,
   StyleSheet,
@@ -135,7 +135,7 @@ const AnimeDetails = () => {
     if (!animeData) return;
 
     try {
-      const deepLink = `daichi://anime/${animeData.id}`;
+      const deepLink = Linking.createURL(`anime/${animeData.id}`);
       await RNShare.share({
         title: `Share ${animeData.title}`,
         message: `Watch ${animeData.title} on Daichi.\n${deepLink}`,
@@ -290,7 +290,7 @@ const AnimeDetails = () => {
         </View>
 
         <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.titleBlock}>
-          <Image source={{ uri: animeData.image }} style={styles.poster} />
+          <Animated.Image source={{ uri: animeData.image }} style={styles.poster} />
           <View style={styles.titleCopy}>
             <Text style={styles.kicker} numberOfLines={1}>
               {animeData.released || 'Release date unavailable'}
@@ -395,16 +395,12 @@ const AnimeDetails = () => {
           </View>
 
           {animeExtras?.cast.length ? (
-            <CharacterVoiceActorRow data={animeExtras.cast} className="mt-6" seeAll />
-          ) : isExtrasLoading ? (
-            <View style={styles.extrasLoading}>
-              <LottieView
-                source={require('~/assets/lottie/loading.json')}
-                autoPlay
-                loop
-                style={{ height: hp(9), width: wp(18) }}
-              />
-            </View>
+            <CharacterVoiceActorRow
+              data={animeExtras.cast}
+              animeId={animeData.id}
+              className="mt-6"
+              seeAll
+            />
           ) : null}
 
           {animeExtras?.recommendations.length ? (

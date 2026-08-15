@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { ArrowSwapVertical } from 'iconsax-react-native';
 import React from 'react';
 import { FlatList, ImageBackground, StyleSheet, Text, View } from 'react-native';
@@ -9,8 +10,11 @@ import { getFormattedTitle } from '~/helpers/TextFormat';
 import { wp } from '~/helpers/common';
 import { CharacterVoiceActor } from '~/types';
 
+const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
+
 type CharacterVoiceActorRowProps = {
   data: CharacterVoiceActor[];
+  animeId?: string;
   className?: string;
   seeAll?: boolean;
   rounded?: boolean;
@@ -21,6 +25,8 @@ type RoundedRowItemProps = {
 };
 
 const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
+  const router = useRouter();
+
   // item.image is the character image — skip if missing
   if (!item?.image) {
     return null;
@@ -32,12 +38,20 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
       <Animated.View
         entering={FadeInRight.duration(500)}
         className="flex items-center justify-center pr-2 pt-2">
-        <ScalePressable scaleTo={0.92}>
+        <ScalePressable
+          scaleTo={0.92}
+          onPress={() =>
+            router.push({
+              pathname: '/anime/cast/person/[personId]',
+              params: { personId: item.id, kind: 'character' },
+            })
+          }>
           <View className="overflow-hidden rounded-full">
-            <ImageBackground
+            <AnimatedImageBackground
               source={{ uri: item.image }}
               className="flex items-center justify-center"
               style={styles.roundedImage}
+              sharedTransitionTag={`cast-character-${item.id}`}
             />
           </View>
           <Text className="font-salsa p-1 text-base text-white" numberOfLines={2}>
@@ -57,12 +71,20 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
         <Animated.View
           entering={FadeInRight.duration(500)}
           className="flex items-center justify-center pr-2 pt-2">
-          <ScalePressable scaleTo={0.92}>
+          <ScalePressable
+            scaleTo={0.92}
+            onPress={() =>
+              router.push({
+                pathname: '/anime/cast/person/[personId]',
+                params: { personId: item.voiceActor?.id || '', kind: 'staff' },
+              })
+            }>
             <View className="overflow-hidden rounded-full">
-              <ImageBackground
+              <AnimatedImageBackground
                 source={{ uri: item.voiceActor.image }}
                 className="flex items-center justify-center"
                 style={styles.roundedImage}
+                sharedTransitionTag={`cast-staff-${item.voiceActor.id}`}
               />
             </View>
             <Text className="font-salsa p-1 text-base text-white" numberOfLines={2}>
@@ -81,8 +103,11 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
 export const CharacterVoiceActorRow = ({
   className,
   data = [],
+  animeId,
   seeAll,
 }: CharacterVoiceActorRowProps) => {
+  const router = useRouter();
+
   if (!Array.isArray(data) || data.length === 0) {
     return null;
   }
@@ -94,7 +119,13 @@ export const CharacterVoiceActorRow = ({
           {getFormattedTitle('Characters & Voice Actors')}
         </Text>
         {seeAll && (
-          <ScalePressable onPress={() => {}} haptic="none">
+          <ScalePressable
+            onPress={() => {
+              if (animeId) {
+                router.push({ pathname: '/anime/cast/[id]', params: { id: animeId } });
+              }
+            }}
+            haptic="none">
             <Text className="font-salsa text-base text-lime-300">View all</Text>
           </ScalePressable>
         )}

@@ -1,7 +1,6 @@
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-// import * as Linking from 'expo-linking';
 import { NavigationBar } from 'expo-navigation-bar';
 import { Stack, usePathname } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
@@ -42,8 +41,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// const prefix = Linking.createURL('/');
-
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const pathname = usePathname();
@@ -83,22 +80,6 @@ export default function RootLayout() {
     return null;
   }
 
-  const linking = {
-    prefixes: ['daichi://', 'https://daichi.app'],
-    config: {
-      screens: {
-        index: '',
-        '(tabs)': {
-          screens: {
-            Home: '',
-          },
-        },
-        'anime/[id]': 'anime/:id',
-        'anime/watch/[episodeId]': 'anime/watch/:episodeId',
-      },
-    },
-  };
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -109,11 +90,7 @@ export default function RootLayout() {
                 <StatusBar animated style="inverted" hidden />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                    initialParams={{ linking }}
-                  />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="browse/[category]" options={{ headerShown: false }} />
                   <Stack.Screen name="browse/list" options={{ headerShown: false }} />
                   <Stack.Screen name="trailer/[videoId]" options={{ headerShown: false }} />

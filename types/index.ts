@@ -79,6 +79,41 @@ export type CharacterVoiceActor = {
   };
 };
 
+export type CastPersonKind = 'character' | 'staff';
+
+export type CastWork = {
+  id: string;
+  title: string;
+  image: string;
+  role?: string;
+  format?: string;
+};
+
+export type CastPersonDetails = {
+  id: string;
+  kind: CastPersonKind;
+  name: string;
+  nativeName?: string;
+  alternateNames: string[];
+  spoilerNames: string[];
+  image: string;
+  description?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  age?: number;
+  bloodType?: string;
+  language?: string;
+  occupations?: string[];
+  homeTown?: string;
+  yearsActive?: string;
+  agency?: string;
+  favourites?: number;
+  siteUrl?: string;
+  nonAnimeRoles?: string[];
+  role?: string;
+  works: CastWork[];
+};
+
 export type AniListAnimeExtras = {
   bannerImage?: string;
   studios: string[];

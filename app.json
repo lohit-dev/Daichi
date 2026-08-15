@@ -41,7 +41,6 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.king-grey.daichi",
-      "associatedDomains": ["applinks:daichi.app"],
       "infoPlist": {
         "UIStatusBarHidden": false,
         "UIViewControllerBasedStatusBarAppearance": false,
@@ -71,7 +70,8 @@
           "data": [
             {
               "scheme": "https",
-              "host": "daichi.app"
+              "host": "daichi.app",
+              "pathPrefix": "/"
             }
           ],
           "category": ["BROWSABLE", "DEFAULT"]

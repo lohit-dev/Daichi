@@ -1,26 +1,27 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
 import type { Episode } from '~/components/watch/EpisodeList';
-import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
-import {
-  fetchAniListAnimeById,
-  fetchAniListStreamingEpisodeImages,
-  fetchKitsuEpisodeImagePage,
-  resolveKitsuAnimeIdFromMal,
-} from '~/services/AniListService';
+import { fetchAniListAnimeById, fetchEpisodeImagesForAnime } from '~/services/AniListService';
 import { fetchAnimeEpisode } from '~/services/AnimeService';
 import type { AnikotoEpisode } from '~/types';
 
+const getProviderAnimeSlug = (url: string): string | undefined => {
+  const match = url.match(/\/watch\/([^/]+)(?:\/|$)/);
+  return match?.[1] || undefined;
+};
+
 const mapEpisode = (episode: AnikotoEpisode): Episode => {
-  const number = getEpisodeNumberKey(episode.episode) || episode.episode;
+  const number = `${Number.parseInt(episode.episode, 10) || 0}`;
 
   return {
     id: number,
     number,
     title: episode.title || `Episode ${number}`,
     image: undefined,
-    animeSlug: episode.slug,
+    // Anikoto's `slug` is the episode slug/number. The season-specific anime
+    // slug lives in the watch URL and must be passed to the stream endpoint.
+    animeSlug: getProviderAnimeSlug(episode.url),
   };
 };
 
@@ -37,50 +38,19 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackIm
     staleTime: 5 * 60 * 1000,
   });
 
-  // Resolve Kitsu first. Its artwork is more complete for long-running shows
-  // such as One Piece, while AniList is only used to fill missing frames.
-  const animeMetadataQuery = useQuery({
-    queryKey: ['anilist', 'anime-mal-id', animeId],
+  // Kitsu is intentionally the first source. AniList fills only missing
+  // episodes, and the anime cover is the final per-episode fallback.
+  const imagesQuery = useQuery({
+    queryKey: ['anilist', 'episode-images', animeId, 'kitsu-priority-v2'],
     queryFn: async () => {
       try {
-        return await fetchAniListAnimeById(animeId);
+        const anime = await fetchAniListAnimeById(animeId);
+        return fetchEpisodeImagesForAnime(animeId, anime.malId);
       } catch {
-        return null;
+        return fetchEpisodeImagesForAnime(animeId);
       }
     },
     enabled: !!animeId,
-    staleTime: 30 * 60 * 1000,
-  });
-
-  const malId = animeMetadataQuery.data?.malId;
-  const kitsuAnimeQuery = useQuery({
-    queryKey: ['kitsu', 'anime-id', malId],
-    queryFn: () => resolveKitsuAnimeIdFromMal(malId!),
-    enabled: animeMetadataQuery.isSuccess && Boolean(malId),
-    staleTime: 24 * 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-  });
-
-  // Kitsu is loaded one page at a time. Page one appears immediately; later
-  // pages are requested only when the user scrolls toward them.
-  const kitsuImagesQuery = useInfiniteQuery({
-    queryKey: ['kitsu', 'episode-images', kitsuAnimeQuery.data],
-    queryFn: ({ pageParam }) => fetchKitsuEpisodeImagePage(kitsuAnimeQuery.data!, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextOffset,
-    enabled: Boolean(kitsuAnimeQuery.data),
-    staleTime: 30 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-  });
-
-  const canFetchAniListFallback =
-    animeMetadataQuery.isSuccess &&
-    (!malId || kitsuAnimeQuery.isSuccess) &&
-    (!kitsuAnimeQuery.data || kitsuImagesQuery.isSuccess);
-  const anilistImagesQuery = useQuery({
-    queryKey: ['anilist', 'streaming-episode-images', animeId],
-    queryFn: () => fetchAniListStreamingEpisodeImages(animeId),
-    enabled: canFetchAniListFallback && !!animeId,
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
@@ -88,47 +58,24 @@ export const useEpisodeList = (animeId: string, type?: 'sub' | 'dub', fallbackIm
   const data: Episode[] | undefined = useMemo(() => {
     if (!episodesQuery.data) return undefined;
 
-    const imageMap = new Map<string, string>();
-    for (const page of kitsuImagesQuery.data?.pages ?? []) {
-      for (const image of page.images) {
-        const key = getEpisodeNumberKey(image.number);
-        if (key) imageMap.set(key, image.thumbnail);
-      }
-    }
-    for (const image of anilistImagesQuery.data ?? []) {
-      const key = getEpisodeNumberKey(image.number);
-      if (key && !imageMap.has(key)) imageMap.set(key, image.thumbnail);
+    const imageMap = new Map<number, string>();
+    for (const image of imagesQuery.data ?? []) {
+      imageMap.set(Math.round(image.number), image.thumbnail);
     }
 
-    const mayUseCoverFallback = anilistImagesQuery.isSuccess;
     return episodesQuery.data.map((episode) => {
-      const thumbnail = imageMap.get(getEpisodeNumberKey(episode.number) || '');
+      const episodeNumber = Math.round(Number.parseFloat(episode.number));
+      const thumbnail = imageMap.get(episodeNumber);
       if (thumbnail) return { ...episode, image: thumbnail };
-      return mayUseCoverFallback ? { ...episode, image: fallbackImage } : episode;
+      return imagesQuery.isSuccess ? { ...episode, image: fallbackImage } : episode;
     });
-  }, [
-    anilistImagesQuery.data,
-    anilistImagesQuery.isSuccess,
-    episodesQuery.data,
-    fallbackImage,
-    kitsuImagesQuery.data,
-  ]);
-
-  const loadMoreImages = useCallback(() => {
-    if (kitsuImagesQuery.hasNextPage && !kitsuImagesQuery.isFetchingNextPage) {
-      kitsuImagesQuery.fetchNextPage();
-    }
-  }, [
-    kitsuImagesQuery.fetchNextPage,
-    kitsuImagesQuery.hasNextPage,
-    kitsuImagesQuery.isFetchingNextPage,
-  ]);
+  }, [episodesQuery.data, fallbackImage, imagesQuery.data, imagesQuery.isSuccess]);
 
   return {
     data,
     isLoading: episodesQuery.isLoading,
     error: episodesQuery.error,
-    loadMoreImages,
-    hasMoreImages: Boolean(kitsuImagesQuery.hasNextPage),
+    loadMoreImages: () => undefined,
+    hasMoreImages: false,
   };
 };

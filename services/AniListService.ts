@@ -6,6 +6,9 @@ import {
   AniListSearchResponse,
   Anime,
   SearchParams,
+  CastPersonDetails,
+  CastPersonKind,
+  CastWork,
 } from '~/types';
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
@@ -218,6 +221,62 @@ const EXTRAS_QUERY = `
       recommendations(page: 1, perPage: 12) {
         nodes {
           mediaRecommendation { ${MEDIA_FIELDS} }
+        }
+      }
+    }
+  }
+`;
+
+const PERSON_WORK_FIELDS = `
+  id
+  title { romaji english }
+  coverImage { large extraLarge }
+  format
+`;
+
+const CHARACTER_DETAILS_QUERY = `
+  query CharacterDetails($id: Int!) {
+    Character(id: $id) {
+      id
+      name { full native alternative alternativeSpoiler }
+      image { large }
+      description(asHtml: false)
+      gender
+      dateOfBirth { year month day }
+      age
+      bloodType
+      favourites
+      siteUrl
+      media(page: 1, perPage: 30, sort: [POPULARITY_DESC]) {
+        edges {
+          node { ${PERSON_WORK_FIELDS} }
+          characterRole
+        }
+      }
+    }
+  }
+`;
+
+const STAFF_DETAILS_QUERY = `
+  query StaffDetails($id: Int!) {
+    Staff(id: $id) {
+      id
+      name { full native alternative }
+      image { large }
+      description(asHtml: false)
+      gender
+      dateOfBirth { year month day }
+      age
+      bloodType
+      languageV2
+      primaryOccupations
+      homeTown
+      yearsActive
+      siteUrl
+      favourites
+      staffMedia(page: 1, perPage: 30, sort: [POPULARITY_DESC]) {
+        edges {
+          node { ${PERSON_WORK_FIELDS} }
         }
       }
     }
@@ -478,6 +537,213 @@ export const fetchAniListAnimeExtras = async (animeId: string) => {
       .map((recommendation) => recommendation.mediaRecommendation)
       .filter((media): media is RawMedia => Boolean(media))
       .map(mapAnime),
+  };
+};
+
+const ANIME_CAST_PAGE_QUERY = `
+  query AnimeCastPage($id: Int!, $page: Int!, $perPage: Int!) {
+    Media(id: $id, type: ANIME) {
+      characters(page: $page, perPage: $perPage, sort: [ROLE, RELEVANCE]) {
+        pageInfo { currentPage hasNextPage }
+        edges {
+          role
+          node { id name { full native } image { large } }
+          voiceActors(language: JAPANESE) {
+            id
+            name { full native }
+            image { large }
+            languageV2
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const fetchAniListAnimeCastPage = async (animeId: string, page: number, perPage = 10) => {
+  const id = Number(animeId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new AniListRequestError('An AniList ID is required to load cast.', 400);
+  }
+
+  const data = await queryAniList<{
+    Media: {
+      characters: {
+        pageInfo: { currentPage: number; hasNextPage: boolean };
+        edges: NonNullable<RawExtrasMedia['characters']>['edges'];
+      };
+    } | null;
+  }>(ANIME_CAST_PAGE_QUERY, { id, page, perPage });
+
+  if (!data.Media) throw new AniListRequestError('Anime cast was not found.', 404);
+  const cast = (data.Media.characters.edges ?? [])
+    .map((edge) => {
+      if (!edge?.node) return null;
+      const actor = edge.voiceActors?.[0];
+      return {
+        id: String(edge.node.id),
+        name: edge.node.name?.full || edge.node.name?.native || 'Unknown character',
+        image: edge.node.image?.large || '',
+        role: formatIdToTitle(edge.role) || 'Unknown',
+        voiceActor: actor
+          ? {
+              id: String(actor.id),
+              name: actor.name?.full || actor.name?.native || 'Unknown voice actor',
+              image: actor.image?.large || '',
+              language: actor.languageV2 || undefined,
+            }
+          : undefined,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+
+  return { cast, ...data.Media.characters.pageInfo };
+};
+
+const formatPersonDate = (date?: RawDate | null) => {
+  if (!date?.year) return undefined;
+  return [date.day, date.month, date.year].filter(Boolean).join(' / ');
+};
+
+const mapCastWork = (
+  media: {
+    id: number;
+    title?: { romaji?: string | null; english?: string | null } | null;
+    coverImage?: { large?: string | null; extraLarge?: string | null } | null;
+    format?: string | null;
+  },
+  role?: string
+): CastWork => ({
+  id: String(media.id),
+  title: media.title?.english?.trim() || media.title?.romaji?.trim() || 'Untitled',
+  image: media.coverImage?.extraLarge || media.coverImage?.large || '',
+  role,
+  format: media.format || undefined,
+});
+
+export const fetchAniListCastPerson = async (
+  kind: CastPersonKind,
+  personId: string
+): Promise<CastPersonDetails> => {
+  const id = Number(personId);
+  if (!Number.isInteger(id) || id <= 0) {
+    throw new AniListRequestError('A valid cast member ID is required.', 400);
+  }
+
+  if (kind === 'character') {
+    const data = await queryAniList<{
+      Character: {
+        id: number;
+        name?: {
+          full?: string | null;
+          native?: string | null;
+          alternative?: string[] | null;
+          alternativeSpoiler?: string[] | null;
+        } | null;
+        image?: { large?: string | null } | null;
+        description?: string | null;
+        gender?: string | null;
+        dateOfBirth?: RawDate | null;
+        age?: number | null;
+        bloodType?: string | null;
+        favourites?: number | null;
+        media?: {
+          edges?:
+            | {
+                node?: Parameters<typeof mapCastWork>[0] | null;
+                characterRole?: string | null;
+              }[]
+            | null;
+        } | null;
+      } | null;
+    }>(CHARACTER_DETAILS_QUERY, { id });
+
+    if (!data.Character) throw new AniListRequestError('Character not found.', 404);
+    const character = data.Character;
+    return {
+      id: String(character.id),
+      kind,
+      name: character.name?.full || character.name?.native || 'Unknown character',
+      nativeName: character.name?.native || undefined,
+      alternateNames: character.name?.alternative ?? [],
+      spoilerNames: character.name?.alternativeSpoiler ?? [],
+      image: character.image?.large || '',
+      description: cleanHtml(character.description),
+      gender: character.gender || undefined,
+      dateOfBirth: formatPersonDate(character.dateOfBirth),
+      age: character.age || undefined,
+      bloodType: character.bloodType || undefined,
+      favourites: character.favourites || undefined,
+      siteUrl: undefined,
+      works: (character.media?.edges ?? [])
+        .filter((edge): edge is typeof edge & { node: Parameters<typeof mapCastWork>[0] } =>
+          Boolean(edge.node)
+        )
+        .map((edge) => mapCastWork(edge.node, edge.characterRole || undefined)),
+    };
+  }
+
+  const data = await queryAniList<{
+    Staff: {
+      id: number;
+      name?: {
+        full?: string | null;
+        native?: string | null;
+        alternative?: string[] | null;
+      } | null;
+      image?: { large?: string | null } | null;
+      description?: string | null;
+      gender?: string | null;
+      dateOfBirth?: RawDate | null;
+      age?: number | null;
+      bloodType?: string | null;
+      languageV2?: string | null;
+      primaryOccupations?: string[] | null;
+      homeTown?: string | null;
+      yearsActive?: number[] | null;
+      siteUrl?: string | null;
+      favourites?: number | null;
+      staffMedia?: {
+        edges?:
+          | {
+              node?: Parameters<typeof mapCastWork>[0] | null;
+            }[]
+          | null;
+      } | null;
+    } | null;
+  }>(STAFF_DETAILS_QUERY, { id });
+
+  if (!data.Staff) throw new AniListRequestError('Voice actor not found.', 404);
+  const staff = data.Staff;
+  const years = staff.yearsActive;
+  return {
+    id: String(staff.id),
+    kind,
+    name: staff.name?.full || staff.name?.native || 'Unknown voice actor',
+    nativeName: staff.name?.native || undefined,
+    alternateNames: staff.name?.alternative ?? [],
+    spoilerNames: [],
+    image: staff.image?.large || '',
+    description: cleanHtml(staff.description),
+    gender: staff.gender || undefined,
+    dateOfBirth: formatPersonDate(staff.dateOfBirth),
+    age: staff.age || undefined,
+    bloodType: staff.bloodType || undefined,
+    language: staff.languageV2 || undefined,
+    occupations: staff.primaryOccupations ?? [],
+    homeTown: staff.homeTown || undefined,
+    yearsActive: years?.length
+      ? `${years[0]}${years[1] ? ` — ${years[1]}` : ' — Present'}`
+      : undefined,
+    agency: undefined,
+    favourites: staff.favourites || undefined,
+    siteUrl: staff.siteUrl || undefined,
+    nonAnimeRoles: [],
+    works: (staff.staffMedia?.edges ?? [])
+      .filter((edge): edge is typeof edge & { node: Parameters<typeof mapCastWork>[0] } =>
+        Boolean(edge.node)
+      )
+      .map((edge) => mapCastWork(edge.node)),
   };
 };
 
