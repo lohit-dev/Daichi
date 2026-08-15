@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type HistoryItem = {
   animeId: string;
+  animeSlug?: string;
   animeTitle: string;
   animeImage: string;
   episodeId: string;

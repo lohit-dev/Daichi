@@ -13,7 +13,12 @@ import {
 import { fetchAnimeStreamingLink } from '~/services/AnimeService';
 import { AnikotoStreamResponse, SubtitleTrack } from '~/types';
 
-export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' | 'dub') => {
+export const useVideoPlayer = (
+  animeId: string,
+  episodeId: string,
+  type: 'sub' | 'dub',
+  animeSlug?: string
+) => {
   const videoRef = useRef<any>(null);
 
   // Zustand selectors (granular to avoid unnecessary renders)
@@ -45,8 +50,8 @@ export const useVideoPlayer = (animeId: string, episodeId: string, type: 'sub' |
     isLoading,
     error: queryError,
   } = useQuery<AnikotoStreamResponse>({
-    queryKey: ['streaming', animeId, episodeId, type],
-    queryFn: () => fetchAnimeStreamingLink(animeId, episodeId),
+    queryKey: ['streaming', animeSlug || animeId, episodeId, type],
+    queryFn: () => fetchAnimeStreamingLink(animeSlug || animeId, episodeId),
     enabled: !!animeId && !!episodeId,
     staleTime: 0,
   });

@@ -10,6 +10,7 @@ export type Episode = {
   number: string;
   title: string;
   image?: string;
+  animeSlug?: string;
 };
 
 type EpisodeListProps = {

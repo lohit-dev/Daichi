@@ -99,10 +99,22 @@ const Discover = () => {
             </View>
           )}
           {subbedAnime.length > 0 && (
-            <RowItem data={subbedAnime} name="Subbed Anime" staticData={subbedAnime} seeAll />
+            <RowItem
+              data={subbedAnime}
+              name="Subbed Anime"
+              staticData={subbedAnime}
+              staticQuery="subbed"
+              seeAll
+            />
           )}
           {dubbedAnime.length > 0 && (
-            <RowItem data={dubbedAnime} name="Dubbed Anime" staticData={dubbedAnime} seeAll />
+            <RowItem
+              data={dubbedAnime}
+              name="Dubbed Anime"
+              staticData={dubbedAnime}
+              staticQuery="dubbed"
+              seeAll
+            />
           )}
         </ScrollView>
       )}

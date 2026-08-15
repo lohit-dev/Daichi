@@ -17,6 +17,8 @@ type RowItemProps = {
   category?: BrowseCategory;
   /** When provided, "View all" navigates to the static list screen with this data */
   staticData?: Anime[];
+  /** Lets the list screen refetch large catalogues instead of serializing them into a URL. */
+  staticQuery?: 'subbed' | 'dubbed';
   className?: string;
   rounded?: boolean;
   testIdPrefix?: string;
@@ -28,6 +30,7 @@ const RowItem = ({
   data,
   category,
   staticData,
+  staticQuery,
   className,
   rounded = false,
   testIdPrefix,
@@ -63,7 +66,15 @@ const RowItem = ({
         {seeAll && (
           <ScalePressable
             onPress={() => {
-              if (staticData?.length) {
+              if (staticQuery) {
+                router.push({
+                  pathname: '/browse/list',
+                  params: {
+                    title: encodeURIComponent(name),
+                    source: staticQuery,
+                  },
+                });
+              } else if (staticData?.length) {
                 router.push({
                   pathname: '/browse/list',
                   params: {

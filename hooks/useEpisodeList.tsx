@@ -20,6 +20,7 @@ const mapEpisode = (episode: AnikotoEpisode): Episode => {
     number,
     title: episode.title || `Episode ${number}`,
     image: undefined,
+    animeSlug: episode.slug,
   };
 };
 

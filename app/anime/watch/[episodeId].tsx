@@ -20,9 +20,10 @@ import { useVideoPlayer } from '~/hooks/useVideoPlayer';
 
 const WatchScreen = () => {
   const router = useRouter();
-  const { episodeId, animeId, type, animeTitle, animeImage } = useLocalSearchParams<{
+  const { episodeId, animeId, animeSlug, type, animeTitle, animeImage } = useLocalSearchParams<{
     episodeId: string;
     animeId: string;
+    animeSlug?: string;
     type: 'sub' | 'dub';
     animeTitle: string;
     animeImage: string;
@@ -66,7 +67,7 @@ const WatchScreen = () => {
     handleVideoTracks,
     handleEnd,
     seekTo,
-  } = useVideoPlayer(animeId, episodeId, type);
+  } = useVideoPlayer(animeId, episodeId, type, animeSlug);
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {
@@ -130,20 +131,21 @@ const WatchScreen = () => {
   }, [episodes, episodeId]);
 
   const goToEpisode = useCallback(
-    (target: { id: string } | null) => {
+    (target: { id: string; animeSlug?: string } | null) => {
       if (!target) return;
       router.replace({
         pathname: '/anime/watch/[episodeId]',
         params: {
           episodeId: target.id,
           animeId,
+          animeSlug: target.animeSlug || animeSlug,
           type,
           animeTitle,
           animeImage,
         },
       });
     },
-    [router, animeId, type, animeTitle, animeImage]
+    [router, animeId, animeSlug, type, animeTitle, animeImage]
   );
 
   const handleVideoEnd = useCallback(() => {
@@ -176,6 +178,7 @@ const WatchScreen = () => {
     lastSavedProgressRef.current = { episodeId, second };
     saveProgress({
       animeId,
+      animeSlug,
       animeTitle: animeTitle || formatIdToTitle(animeId),
       animeImage: animeImage || '',
       episodeId,
@@ -186,6 +189,7 @@ const WatchScreen = () => {
     });
   }, [
     animeId,
+    animeSlug,
     animeImage,
     animeTitle,
     currentEpisodeThumbnail,

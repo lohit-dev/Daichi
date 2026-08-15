@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, Text, View, Dimensions } from 'react-native';
+import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,8 +10,9 @@ import { getFormattedTitle } from '~/helpers/TextFormat';
 const MyList = () => {
   const savedAnimes = useSavedAnimesStore((s) => s.animes);
 
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = (screenWidth - 64) / 3;
+  const { width: screenWidth } = useWindowDimensions();
+  const gridGap = 8;
+  const cardWidth = (screenWidth - 32 - gridGap * 2) / 3;
 
   return (
     <SafeAreaView edges={['left', 'right']} className="flex-1 bg-neutral-950">
@@ -21,41 +22,41 @@ const MyList = () => {
           className="absolute h-72 w-full rounded-full"
         />
       </View>
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 110 }}
-        showsVerticalScrollIndicator={false}>
-        <View className="mt-16 items-center px-6 pt-8">
-          <Text className="font-salsa pt-6 text-5xl text-white">
-            {getFormattedTitle('My Library', 'text-5xl font-salsa font-semibold')}
-          </Text>
-          <Text className="font-salsa mt-2 text-lg text-neutral-400">
-            {getFormattedTitle(
-              `${savedAnimes.length} Saved Anime`,
-              'text-lg font-salsa font-semibold'
-            )}
-          </Text>
-        </View>
-        {savedAnimes.length > 0 ? (
-          <Animated.View entering={FadeInDown} className="flex-1 px-4 pt-4">
-            <View className="flex-row flex-wrap justify-between">
-              {savedAnimes.map((anime, index) => (
-                <View key={anime.slug} className="mb-4" style={{ width: cardWidth }}>
-                  <AnimeCard item={anime} index={index} />
-                </View>
-              ))}
-            </View>
+      <FlatList
+        data={savedAnimes}
+        numColumns={3}
+        keyExtractor={(item) => item.slug}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 16 }}
+        columnWrapperStyle={{ justifyContent: 'space-between' }}
+        ListHeaderComponent={
+          <View className="mt-16 items-center px-6 pt-8">
+            <Text className="font-salsa pt-6 text-5xl text-white">
+              {getFormattedTitle('My Library', 'text-5xl font-salsa font-semibold')}
+            </Text>
+            <Text className="font-salsa mt-2 text-lg text-neutral-400">
+              {getFormattedTitle(
+                `${savedAnimes.length} Saved Anime`,
+                'text-lg font-salsa font-semibold'
+              )}
+            </Text>
+          </View>
+        }
+        renderItem={({ item, index }) => (
+          <Animated.View entering={FadeInDown} className="mb-4" style={{ width: cardWidth }}>
+            <AnimeCard item={item} index={index} width={cardWidth - 16} />
           </Animated.View>
-        ) : (
+        )}
+        ListEmptyComponent={
           <Animated.View
             entering={FadeInDown.delay(300)}
-            className="flex-1 items-center justify-center p-8 pt-20">
+            className="items-center justify-center p-8 pt-20">
             <Text className="font-salsa text-center text-2xl text-neutral-400">
               Your library is empty{'\n'}Add some anime to get started!
             </Text>
           </Animated.View>
-        )}
-      </ScrollView>
+        }
+      />
     </SafeAreaView>
   );
 };

@@ -1,7 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2 } from 'iconsax-react-native';
 import { useCallback, useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,21 +10,35 @@ import AnimeCard from '~/components/shared/AnimeCard';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { hp, wp } from '~/helpers/common';
+import { fetchAniListDubbed, fetchAniListSubbed } from '~/services/AniListService';
 import { Anime } from '~/types';
 
 const NUM_COLUMNS = 3;
 
 export default function StaticListScreen() {
   const router = useRouter();
-  const { title, data } = useLocalSearchParams<{ title?: string; data: string }>();
+  const { title, data, source } = useLocalSearchParams<{
+    title?: string;
+    data?: string;
+    source?: 'subbed' | 'dubbed';
+  }>();
+
+  const catalogueQuery = useQuery<Anime[]>({
+    queryKey: ['anilist', source],
+    queryFn: source === 'subbed' ? fetchAniListSubbed : fetchAniListDubbed,
+    enabled: Boolean(source),
+    staleTime: 10 * 60 * 1000,
+  });
 
   const items: Anime[] = useMemo(() => {
+    if (source) return catalogueQuery.data ?? [];
+    if (!data) return [];
     try {
       return JSON.parse(decodeURIComponent(data as string)) as Anime[];
     } catch {
       return [];
     }
-  }, [data]);
+  }, [catalogueQuery.data, data, source]);
 
   const displayTitle = title ? decodeURIComponent(title as string) : 'Anime';
 
@@ -52,7 +67,15 @@ export default function StaticListScreen() {
         <View style={styles.headerSpacer} />
       </Animated.View>
 
-      {items.length === 0 ? (
+      {catalogueQuery.isLoading ? (
+        <View style={styles.empty}>
+          <ActivityIndicator size="large" color="#a3e635" />
+        </View>
+      ) : catalogueQuery.isError ? (
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>Unable to load this catalogue.</Text>
+        </View>
+      ) : items.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyText}>No titles found.</Text>
         </View>

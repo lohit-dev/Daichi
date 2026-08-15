@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { Star1 } from 'iconsax-react-native';
 import React from 'react';
-import { ImageBackground, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ImageBackground, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import ScalePressable from './ScalePressable';
@@ -20,11 +20,12 @@ interface AnimeCardProps {
   item: Anime;
   index: number;
   detailsEnabled?: boolean;
+  width?: number;
   testID?: string;
 }
 
 const AnimeCard: React.FC<AnimeCardProps> = React.memo(
-  ({ item, index, detailsEnabled = true, testID }) => {
+  ({ item, index, detailsEnabled = true, width, testID }) => {
     const router = useRouter();
 
     const handleNavigation = () => {
@@ -46,7 +47,7 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
           <View className="overflow-hidden rounded-2xl">
             <AnimatedImageBackground
               source={{ uri: item.image }}
-              style={styles.Image}
+              style={[styles.Image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}
               sharedTransitionTag="image">
               {detailsEnabled && (
                 <View className="flex-1 items-end justify-start p-2">
@@ -80,3 +81,5 @@ const styles = StyleSheet.create({
     height: hp(19),
   },
 });
+
+const IMAGE_ASPECT_RATIO = hp(19) / wp(28);

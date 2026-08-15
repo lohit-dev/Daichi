@@ -10,6 +10,7 @@ import { useEpisodeList } from '~/hooks/useEpisodeList';
 
 type Episode = {
   episodeId: string;
+  animeSlug?: string;
   number: number;
   title: string;
   isFiller: boolean;
@@ -21,7 +22,7 @@ type EpisodeListSheetProps = {
   type: 'sub' | 'dub';
   fallbackImage?: string;
   bottomSheetRef: RefObject<BottomSheetModal>;
-  onEpisodePress: (episodeId: string) => void;
+  onEpisodePress: (episode: { episodeId: string; animeSlug?: string }) => void;
   onDismiss?: () => void;
   enablePanDownToClose?: boolean;
   enableBackdropPress?: boolean;
@@ -59,6 +60,7 @@ const EpisodeListSheet = ({
     if (!episodeData) return [];
     return episodeData.map((ep) => ({
       episodeId: ep.id,
+      animeSlug: ep.animeSlug,
       number: parseFloat(ep.number) || 0,
       title: ep.title || `Episode ${ep.number}`,
       isFiller: false,
@@ -89,7 +91,7 @@ const EpisodeListSheet = ({
     (episode: Episode) => {
       if (isSelectingEpisodeRef.current) return;
       isSelectingEpisodeRef.current = true;
-      onEpisodePress(episode.episodeId);
+      onEpisodePress({ episodeId: episode.episodeId, animeSlug: episode.animeSlug });
       bottomSheetRef.current?.dismiss?.();
     },
     [bottomSheetRef, onEpisodePress]

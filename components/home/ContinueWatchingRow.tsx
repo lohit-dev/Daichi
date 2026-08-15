@@ -64,6 +64,7 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
       params: {
         episodeId: item.episodeId,
         animeId: item.animeId,
+        animeSlug: item.animeSlug,
         animeTitle: item.animeTitle,
         animeImage: item.animeImage,
         type: 'sub',
