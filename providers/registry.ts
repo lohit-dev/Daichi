@@ -1,7 +1,7 @@
-import { StreamingProvider, ProviderName } from './types';
+import { AnikotoProvider } from './anikoto';
 import { AnimeKaiProvider } from './animekai';
 import { AnimePaheProvider } from './animepahe';
-import { AnikotoProvider } from './anikoto';
+import { StreamingProvider, ProviderName } from './types';
 
 const providers: Record<ProviderName, StreamingProvider> = {
   animekai: new AnimeKaiProvider(),

@@ -1,4 +1,3 @@
-import { loadHtml, HtmlDoc } from '../utils/html-parser';
 import {
   StreamingProvider,
   ProviderSearchResult,
@@ -6,6 +5,7 @@ import {
   ProviderStreamSource,
   ProviderSubtitle,
 } from '../types';
+import { loadHtml, HtmlDoc } from '../utils/html-parser';
 
 const BASE_URL = 'https://anikototv.to';
 const USER_AGENT =
@@ -159,10 +159,10 @@ export class AnikotoProvider implements StreamingProvider {
       // 1. Fetch server list for the episode
       const serversUrl = `${BASE_URL}/ajax/server/list?servers=${episodeId}`;
       const serversRes = await fetch(serversUrl, {
-        headers: { 
-          ...makeHeaders(), 
+        headers: {
+          ...makeHeaders(),
           'X-Requested-With': 'XMLHttpRequest',
-          ...(cookie ? { 'Cookie': cookie } : {})
+          ...(cookie ? { Cookie: cookie } : {}),
         },
       });
       const serversData = await serversRes.json();
@@ -196,10 +196,10 @@ export class AnikotoProvider implements StreamingProvider {
       for (const server of servers) {
         try {
           const streamInfoRes = await fetch(`${BASE_URL}/ajax/server?get=${server.linkId}`, {
-            headers: { 
-              ...makeHeaders(), 
+            headers: {
+              ...makeHeaders(),
               'X-Requested-With': 'XMLHttpRequest',
-              ...(cookie ? { 'Cookie': cookie } : {})
+              ...(cookie ? { Cookie: cookie } : {}),
             },
           });
           const streamInfoData = await streamInfoRes.json();

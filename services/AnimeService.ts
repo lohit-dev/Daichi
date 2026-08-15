@@ -1,5 +1,5 @@
-import { getProvider } from '~/providers/registry';
 import { useProviderMappingStore } from '~/app/_store/useProviderMappingStore';
+import { getProvider } from '~/providers/registry';
 import type { AnikotoEpisodesResponse, AnikotoStreamResponse } from '~/types';
 
 const STREAM_REQUEST_TIMEOUT_MS = 15_000;

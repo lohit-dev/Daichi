@@ -1,4 +1,3 @@
-import { loadHtml, HtmlDoc } from '../utils/html-parser';
 import {
   StreamingProvider,
   ProviderSearchResult,
@@ -7,6 +6,7 @@ import {
 } from '../types';
 import { MegaUp } from './megaup';
 import { USER_AGENT } from '../animepahe/utils';
+import { loadHtml, HtmlDoc } from '../utils/html-parser';
 
 const BASE_URL = 'https://anikai.stream';
 

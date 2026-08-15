@@ -4,8 +4,8 @@ import {
   ProviderEpisode,
   ProviderStreamSource,
 } from '../types';
-import { loadHtml, HtmlDoc } from '../utils/html-parser';
 import { decrypt } from './decrypt';
+import type { AnimePaheSearchItem, AnimePaheEpisode, AnimePaheStreamResult } from './types';
 import { unpackJsAndCombine } from './unpacker';
 import {
   USER_AGENT,
@@ -14,7 +14,7 @@ import {
   substringAfter,
   substringAfterLast,
 } from './utils';
-import type { AnimePaheSearchItem, AnimePaheEpisode, AnimePaheStreamResult } from './types';
+import { loadHtml, HtmlDoc } from '../utils/html-parser';
 
 const BASE_URL = 'https://animepahe.pw';
 

@@ -2,9 +2,9 @@
 // htmlparser2 wrapper — lightweight DOM query helpers for React Native
 // ---------------------------------------------------------------------------
 
-import { parseDocument } from 'htmlparser2';
 import { Document, Element, AnyNode, isTag } from 'domhandler';
 import { findAll, findOne, getAttributeValue, textContent, getChildren } from 'domutils';
+import { parseDocument } from 'htmlparser2';
 
 export class HtmlDoc {
   private doc: Document;
