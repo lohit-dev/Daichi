@@ -6,13 +6,25 @@
 
 Daichi (大智, "great wisdom") is a free, open-source anime app built with **Expo**, **React Native**, and **TypeScript**. Discover trending anime, browse episodes, manage your personal library, and enjoy a clean streaming experience with smooth native animations.
 
-| <img src="assets/mockups/01-launch.png" width="220"/> | <img src="assets/mockups/02-home-hero.png" width="220"/> | <img src="assets/mockups/05-discover-tab.png" width="220"/> | <img src="assets/mockups/14-my-list-populated.png" width="220"/> |
-| :---------------------------------------------------: | :------------------------------------------------------: | :---------------------------------------------------------: | :--------------------------------------------------------------: |
-|                      **Launch**                       |                         **Home**                         |                        **Discover**                         |                          **My Library**                          |
+| <img src="assets/mockups/intro.png" width="220"/> | <img src="assets/mockups/home.png" width="220"/> | <img src="assets/mockups/home-scrolled.png" width="220"/> | <img src="assets/mockups/continue-watching.png" width="220"/> |
+| :-----------------------------------------------: | :----------------------------------------------: | :-------------------------------------------------------: | :-----------------------------------------------------------: |
+|                    **Launch**                     |                     **Home**                     |                        **Browse**                         |                     **Continue Watching**                     |
 
-| <img src="assets/mockups/03-scrolled-home.png" width="220"/> | <img src="assets/mockups/08-anime-details-header.png" width="220"/> | <img src="assets/mockups/11-episode-sheet.png" width="220"/> | <img src="assets/mockups/13-video-player-active.png" width="220"/> |
-| :----------------------------------------------------------: | :-----------------------------------------------------------------: | :----------------------------------------------------------: | :----------------------------------------------------------------: |
-|                          **Browse**                          |                          **Anime Details**                          |                      **Episode Sheet**                       |                          **Video Player**                          |
+| <img src="assets/mockups/search.png" width="220"/> | <img src="assets/mockups/search-conan.png" width="220"/> | <img src="assets/mockups/anime-details.png" width="220"/> | <img src="assets/mockups/anime-details-scrolled.png" width="220"/> |
+| :------------------------------------------------: | :------------------------------------------------------: | :-------------------------------------------------------: | :----------------------------------------------------------------: |
+|                    **Discover**                    |                    **Search Results**                    |                     **Anime Details**                     |                  **Characters & Recommendations**                  |
+
+| <img src="assets/mockups/episodes-list.png" width="220"/> | <img src="assets/mockups/player-overlay.png" width="220"/> | <img src="assets/mockups/player-playing.png" width="220"/> | <img src="assets/mockups/view-all.png" width="220"/> |
+| :-------------------------------------------------------: | :--------------------------------------------------------: | :--------------------------------------------------------: | :--------------------------------------------------: |
+|                     **Episode Sheet**                     |                      **Video Player**                      |                  **Video Player Active**                   |                     **View All**                     |
+
+| <img src="assets/mockups/character.png" width="220"/> | <img src="assets/mockups/character-scrolled.png" width="220"/> | <img src="assets/mockups/voice-actor.png" width="220"/> | <img src="assets/mockups/voice-actor-scrolled.png" width="220"/> |
+| :---------------------------------------------------: | :------------------------------------------------------------: | :-----------------------------------------------------: | :--------------------------------------------------------------: |
+|                 **Character Profile**                 |                       **Character Bio**                        |                     **Voice Actor**                     |                     **Voice Actor Credits**                      |
+
+| <img src="assets/mockups/library_empty.png" width="220"/> | <img src="assets/mockups/library-with-anime.png" width="220"/> | <img src="assets/mockups/loading.png" width="220"/> |
+| :-------------------------------------------------------: | :------------------------------------------------------------: | :-------------------------------------------------: |
+|                     **Empty Library**                     |                         **My Library**                         |                     **Loading**                     |
 
 ## Features
 
