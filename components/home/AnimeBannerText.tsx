@@ -50,7 +50,7 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
           className="absolute bottom-2 left-0 right-0 px-3 text-center text-white"
           style={[styles.title, { height: titleHeight }]}>
           <Text
-            className="font-salsa px-2 pt-3 text-center text-3xl font-semibold text-white"
+            className="px-2 pt-3 text-center font-salsa text-3xl font-semibold text-white"
             numberOfLines={2}
             ellipsizeMode="tail">
             {getFormattedTitle(item.title || '', 'text-4xl font-salsa')}

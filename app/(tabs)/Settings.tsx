@@ -103,7 +103,7 @@ const Settings = () => {
               source={{ uri: 'https://your-default-avatar-url.com' }}
               className="h-24 w-24 rounded-full border-2 border-lime-400"
             />
-            <Text className="font-salsa mt-2 text-2xl text-white">John Doe</Text>
+            <Text className="mt-2 font-salsa text-2xl text-white">John Doe</Text>
             <Text className="font-salsa text-sm text-neutral-400">john.doe@example.com</Text>
           </Animated.View>
         </View>

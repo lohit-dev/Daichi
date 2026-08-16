@@ -76,7 +76,7 @@ const Discover = () => {
           showsVerticalScrollIndicator={false}>
           {/* Title Section */}
           <Animated.View entering={FadeInDown.delay(400).duration(800)}>
-            <Text className="font-salsa text-center text-white" style={{ fontSize: wp(10) }}>
+            <Text className="text-center font-salsa text-white" style={{ fontSize: wp(10) }}>
               What are you{'\n'}
               <Text>Looking for ?</Text>
             </Text>

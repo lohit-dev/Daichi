@@ -54,10 +54,10 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
               sharedTransitionTag={`cast-character-${item.id}`}
             />
           </View>
-          <Text className="font-salsa p-1 text-base text-white" numberOfLines={2}>
+          <Text className="p-1 font-salsa text-base text-white" numberOfLines={2}>
             {getFormattedTitle(item.name)}
           </Text>
-          <Text className="font-salsa p-1 text-base text-lime-400" numberOfLines={1}>
+          <Text className="p-1 font-salsa text-base text-lime-400" numberOfLines={1}>
             {item.role}
           </Text>
         </ScalePressable>
@@ -87,10 +87,10 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
                 sharedTransitionTag={`cast-staff-${item.voiceActor.id}`}
               />
             </View>
-            <Text className="font-salsa p-1 text-base text-white" numberOfLines={2}>
+            <Text className="p-1 font-salsa text-base text-white" numberOfLines={2}>
               {getFormattedTitle(item.voiceActor.name)}
             </Text>
-            <Text className="font-salsa p-1 text-base text-lime-400" numberOfLines={1}>
+            <Text className="p-1 font-salsa text-base text-lime-400" numberOfLines={1}>
               {item.voiceActor.language || 'Voice Actor'}
             </Text>
           </ScalePressable>

@@ -31,10 +31,10 @@ const MyList = () => {
         columnWrapperStyle={{ justifyContent: 'space-between' }}
         ListHeaderComponent={
           <View className="mt-16 items-center px-6 pt-8">
-            <Text className="font-salsa pt-6 text-5xl text-white">
+            <Text className="pt-6 font-salsa text-5xl text-white">
               {getFormattedTitle('My Library', 'text-5xl font-salsa font-semibold')}
             </Text>
-            <Text className="font-salsa mt-2 text-lg text-neutral-400">
+            <Text className="mt-2 font-salsa text-lg text-neutral-400">
               {getFormattedTitle(
                 `${savedAnimes.length} Saved Anime`,
                 'text-lg font-salsa font-semibold'
@@ -51,7 +51,7 @@ const MyList = () => {
           <Animated.View
             entering={FadeInDown.delay(300)}
             className="items-center justify-center p-8 pt-20">
-            <Text className="font-salsa text-center text-2xl text-neutral-400">
+            <Text className="text-center font-salsa text-2xl text-neutral-400">
               Your library is empty{'\n'}Add some anime to get started!
             </Text>
           </Animated.View>
