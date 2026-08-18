@@ -13,6 +13,7 @@ import {
   Share,
   Alert,
   Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
@@ -33,15 +34,16 @@ import { useVideoPlayer } from '~/hooks/useVideoPlayer';
 const WatchScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const [activePanel, setActivePanel] = useState<'episodes' | 'chat'>('episodes');
   const dockAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(dockAnim, {
       toValue: activePanel === 'episodes' ? 0 : 1,
-      damping: 18,
-      stiffness: 180,
-      mass: 0.8,
+      stiffness: 260,
+      damping: 22,
+      mass: 0.55,
       useNativeDriver: true,
     }).start();
   }, [activePanel, dockAnim]);
@@ -364,35 +366,52 @@ const WatchScreen = () => {
         />
       </View>
 
-      {/* ── Content Container ────────────────────────────────────────── */}
-      <View style={{ flex: 1, display: isFullscreen || isPiP ? 'none' : 'flex' }}>
-        {/* ── Content: Episodes List or Chat Panel ─────── */}
-        {activePanel === 'episodes' ? (
-          <View style={{ flex: 1 }}>
+      {/* ── Content Container: Animated Sliding Panels (Episodes & Chat) ── */}
+      <View style={{ flex: 1, overflow: 'hidden', display: isFullscreen || isPiP ? 'none' : 'flex' }}>
+        <Animated.View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            width: screenWidth * 2,
+            transform: [
+              {
+                translateX: dockAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -screenWidth],
+                }),
+              },
+            ],
+          }}>
+          {/* Panel 1: Episodes List + Meta Info */}
+          <Animated.View
+            style={{
+              width: screenWidth,
+              flex: 1,
+              opacity: dockAnim.interpolate({
+                inputRange: [0, 0.7, 1],
+                outputRange: [1, 0.6, 0.2],
+              }),
+            }}>
             {/* ── Compact Info section (only on Episodes tab) ─ */}
             <View style={styles.infoSection}>
-              <View style={styles.infoHeader}>
-                <View style={styles.infoMeta}>
-                  <Text style={styles.episodeLabel}>
-                    EP {currentEpisode?.number ?? episodeId}
-                    {type === 'dub' ? '  ·  DUB' : '  ·  SUB'}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.episodeTitle}>
-                    {currentEpisode?.title ?? displayTitle}
-                  </Text>
-                  <Text numberOfLines={1} style={styles.animeSubtitle}>
-                    {displayTitle}
-                  </Text>
-                </View>
+              {/* Full Episode Title — never ellipsized */}
+              <Text style={styles.episodeTitle}>
+                {currentEpisode?.title ?? displayTitle}
+              </Text>
 
-                {/* Clean compact action pills */}
+              {/* Sub-bar: Anime title on left, Action buttons on right */}
+              <View style={styles.subMetaRow}>
+                <Text numberOfLines={1} style={styles.animeSubtitle}>
+                  {displayTitle}
+                </Text>
+
                 <View style={styles.actionRow}>
                   <ScalePressable
                     style={styles.actionPill}
                     scaleTo={0.92}
                     haptic="light"
                     onPress={handleShare}>
-                    <Ionicons name="share-outline" size={14} color={COLORS.textMuted} />
+                    <Ionicons name="share-outline" size={13} color={COLORS.textMuted} />
                     <Text style={styles.actionPillLabel}>Share</Text>
                   </ScalePressable>
 
@@ -401,15 +420,15 @@ const WatchScreen = () => {
                     scaleTo={0.92}
                     haptic="light"
                     onPress={handleDownload}>
-                    <Ionicons name="download-outline" size={14} color={COLORS.textMuted} />
+                    <Ionicons name="download-outline" size={13} color={COLORS.textMuted} />
                     <Text style={styles.actionPillLabel}>Download</Text>
                   </ScalePressable>
                 </View>
               </View>
 
-              {/* Episode description */}
+              {/* Episode description — shown in full */}
               {currentEpisode?.description ? (
-                <Text numberOfLines={2} ellipsizeMode="tail" style={styles.episodeDescription}>
+                <Text style={styles.episodeDescription}>
                   {currentEpisode.description}
                 </Text>
               ) : null}
@@ -422,18 +441,29 @@ const WatchScreen = () => {
               bottomPadding={bottomDockSpace}
               onSelectEpisode={(ep) => goToEpisode(ep)}
             />
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={[styles.chatContent, { paddingBottom: bottomDockSpace }]}
-            showsVerticalScrollIndicator={false}>
-            <EpisodeDiscussion
-              animeId={animeId}
-              episodeId={currentEpisode?.number || episodeId}
-              episodeTitle={currentEpisode?.title}
-            />
-          </ScrollView>
-        )}
+          </Animated.View>
+
+          {/* Panel 2: Episode Discussion / Chat */}
+          <Animated.View
+            style={{
+              width: screenWidth,
+              flex: 1,
+              opacity: dockAnim.interpolate({
+                inputRange: [0, 0.3, 1],
+                outputRange: [0.2, 0.6, 1],
+              }),
+            }}>
+            <ScrollView
+              contentContainerStyle={[styles.chatContent, { paddingBottom: bottomDockSpace }]}
+              showsVerticalScrollIndicator={false}>
+              <EpisodeDiscussion
+                animeId={animeId}
+                episodeId={currentEpisode?.number ? String(currentEpisode.number) : episodeId}
+                episodeTitle={currentEpisode?.title}
+              />
+            </ScrollView>
+          </Animated.View>
+        </Animated.View>
 
         {/* ── Floating bottom dock: Episodes | Chat ────── */}
         <View style={[styles.floatingDock, { bottom: Math.max(insets.bottom, 14) }]}>
@@ -512,40 +542,31 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.07)',
-    gap: 8,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  infoMeta: {
-    flex: 1,
-    minWidth: 0,
-    gap: 1,
-  },
-  episodeLabel: {
-    color: COLORS.accent,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.1,
+    gap: 6,
   },
   episodeTitle: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
-    lineHeight: 18,
+    lineHeight: 22,
+  },
+  subMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   animeSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: '500',
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    flex: 1,
   },
   episodeDescription: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    lineHeight: 15,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12.5,
+    lineHeight: 18,
     fontWeight: '400',
   },
 

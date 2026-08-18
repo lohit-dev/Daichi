@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { View, Text, ActivityIndicator, Animated, StyleSheet } from 'react-native';
@@ -211,15 +211,6 @@ const PlayerOverlay = ({
                 icon={resizeMode.icon}
                 onPress={onCycleResizeMode}
               />
-              {/* PiP button — only show in non-fullscreen inline mode */}
-              {!isFullscreen && !isPiP && (
-                <TopButton
-                  size={topBtnSize}
-                  iconSize={topIconSize}
-                  icon="tv-outline"
-                  onPress={onEnterPiP}
-                />
-              )}
               <TopButton
                 size={topBtnSize}
                 iconSize={topIconSize}
@@ -358,16 +349,35 @@ const PlayerOverlay = ({
                 <Text style={{ color: COLORS.textFaint }}> / {formatTime(duration)}</Text>
               </Text>
 
-              <ScalePressable
-                onPress={() => setIsFullscreen(!isFullscreen)}
-                className="p-1"
-                scaleTo={0.85}>
-                <Ionicons
-                  name={isFullscreen ? 'contract' : 'expand'}
-                  size={timecodeFontSize + 6}
-                  color={COLORS.textMuted}
-                />
-              </ScalePressable>
+              <View className="flex-row items-center" style={{ gap: 10 }}>
+                {/* Picture in Picture Button */}
+                {!isPiP && (
+                  <ScalePressable
+                    onPress={onEnterPiP}
+                    className="p-1"
+                    scaleTo={0.85}
+                    accessibilityLabel="Picture in Picture">
+                    <MaterialCommunityIcons
+                      name="picture-in-picture-bottom-right"
+                      size={timecodeFontSize + 7}
+                      color={COLORS.textMuted}
+                    />
+                  </ScalePressable>
+                )}
+
+                {/* Fullscreen Button */}
+                <ScalePressable
+                  onPress={() => setIsFullscreen(!isFullscreen)}
+                  className="p-1"
+                  scaleTo={0.85}
+                  accessibilityLabel={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}>
+                  <Ionicons
+                    name={isFullscreen ? 'contract' : 'expand'}
+                    size={timecodeFontSize + 6}
+                    color={COLORS.textMuted}
+                  />
+                </ScalePressable>
+              </View>
             </View>
           </View>
         </Animated.View>
