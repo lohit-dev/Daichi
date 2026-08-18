@@ -103,22 +103,44 @@ export const useEpisodeList = (
   const data: Episode[] | undefined = useMemo(() => {
     if (!episodesQuery.data) return undefined;
 
-    const imageMap = new Map<string, string>();
+    const metadataMap = new Map<
+      string,
+      { thumbnail?: string; description?: string; airDate?: string }
+    >();
     for (const page of kitsuImagesQuery.data?.pages ?? []) {
-      for (const image of page.images) {
-        const key = getEpisodeNumberKey(image.number);
-        if (key) imageMap.set(key, image.thumbnail);
+      for (const item of page.images) {
+        const key = getEpisodeNumberKey(item.number);
+        if (key) {
+          metadataMap.set(key, {
+            thumbnail: item.thumbnail,
+            description: item.description,
+            airDate: item.airDate,
+          });
+        }
       }
     }
-    for (const image of anilistImagesQuery.data ?? []) {
-      const key = getEpisodeNumberKey(image.number);
-      if (key && !imageMap.has(key)) imageMap.set(key, image.thumbnail);
+    for (const item of anilistImagesQuery.data ?? []) {
+      const key = getEpisodeNumberKey(item.number);
+      if (key && !metadataMap.has(key)) {
+        metadataMap.set(key, {
+          thumbnail: item.thumbnail,
+          description: item.description,
+          airDate: item.airDate,
+        });
+      }
     }
 
     return episodesQuery.data.map((episode) => {
-      const thumbnail = imageMap.get(getEpisodeNumberKey(episode.number) || '');
-      if (thumbnail) return { ...episode, image: thumbnail };
-      return anilistImagesQuery.isSuccess ? { ...episode, image: fallbackImage } : episode;
+      const meta = metadataMap.get(getEpisodeNumberKey(episode.number) || '');
+      const thumbnail = meta?.thumbnail;
+      const description = meta?.description;
+      const airDate = meta?.airDate;
+      return {
+        ...episode,
+        image: thumbnail || (anilistImagesQuery.isSuccess ? fallbackImage : episode.image),
+        description: description || episode.description,
+        airDate: airDate || episode.airDate,
+      };
     });
   }, [
     anilistImagesQuery.data,

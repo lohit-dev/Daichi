@@ -91,7 +91,20 @@ export const usePlayerControls = (seekTo: (time: number) => void, onExit?: () =>
         // Package not installed or platform doesn't support it — ignore.
       }
     })();
+
+    return () => {
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+      if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+    };
   }, [isFullscreen]);
+
+  // Ensure orientation resets to portrait on unmount
+  useEffect(() => {
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, []);
 
   // -----------------------------------------------------------------------
   // Settings sheet slide animation

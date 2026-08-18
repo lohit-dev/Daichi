@@ -37,7 +37,9 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
         entering={FadeInDown.delay(Math.min(index, MAX_STAGGER_ITEMS) * STAGGER_DELAY_MS).duration(
           400
         )}
-        className="flex-1 items-center justify-center p-2">
+        className={
+          width ? 'items-center justify-center p-2' : 'flex-1 items-center justify-center p-2'
+        }>
         <ScalePressable
           testID={testID}
           accessibilityRole="button"

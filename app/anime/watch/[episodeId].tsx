@@ -1,17 +1,30 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft } from 'iconsax-react-native';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Share,
+  Alert,
+  Animated,
+  useWindowDimensions,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 
 import { useHistoryStore } from '~/app/_store/useHistoryStore';
 import { usePlayerStore } from '~/app/_store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
+import EpisodeDiscussion from '~/components/watch/EpisodeDiscussion';
 import EpisodeList from '~/components/watch/EpisodeList';
 import PlayerOverlay from '~/components/watch/PlayerOverlay';
 import SettingsSheet from '~/components/watch/SettingsSheet';
-import UpNextCard from '~/components/watch/UpNextCard';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
 import { formatIdToTitle } from '~/helpers/common';
 import { useEpisodeList } from '~/hooks/useEpisodeList';
@@ -20,13 +33,41 @@ import { useVideoPlayer } from '~/hooks/useVideoPlayer';
 
 const WatchScreen = () => {
   const router = useRouter();
-  const { episodeId, animeId, animeSlug, type, animeTitle, animeImage } = useLocalSearchParams<{
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const [activePanel, setActivePanel] = useState<'episodes' | 'chat'>('episodes');
+  const dockAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(dockAnim, {
+      toValue: activePanel === 'episodes' ? 0 : 1,
+      stiffness: 260,
+      damping: 22,
+      mass: 0.55,
+      useNativeDriver: true,
+    }).start();
+  }, [activePanel, dockAnim]);
+
+  const {
+    episodeId,
+    animeId,
+    animeSlug,
+    type,
+    animeTitle,
+    animeImage,
+    episodeTitle: paramEpisodeTitle,
+    episodeDescription: paramEpisodeDescription,
+    episodeThumbnail: paramEpisodeThumbnail,
+  } = useLocalSearchParams<{
     episodeId: string;
     animeId: string;
     animeSlug?: string;
     type: 'sub' | 'dub';
-    animeTitle: string;
-    animeImage: string;
+    animeTitle?: string;
+    animeImage?: string;
+    episodeTitle?: string;
+    episodeDescription?: string;
+    episodeThumbnail?: string;
   }>();
 
   // Reset store on mount, clean up on unmount
@@ -36,16 +77,57 @@ const WatchScreen = () => {
     // Check if we have saved progress for this exact episode
     const historyItem = useHistoryStore.getState().history[animeId];
     if (historyItem && historyItem.episodeId === episodeId && historyItem.progress > 0) {
-      // If we do, queue it up so handleLoad will automatically seek to it
       usePlayerStore.getState().setPendingSeek(historyItem.progress);
     }
 
-    return () => usePlayerStore.getState().reset();
+    return () => {
+      usePlayerStore.getState().setIsPlaying(false);
+      usePlayerStore.getState().reset();
+    };
   }, [animeId, episodeId]);
 
   // -----------------------------------------------------------------------
   // Hooks
   // -----------------------------------------------------------------------
+
+  const displayTitle = animeTitle || formatIdToTitle(animeId);
+  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
+  const episodes = episodeListData ?? [];
+  const bottomDockSpace = insets.bottom + 120;
+
+  const historyItem = useHistoryStore((s) => s.history[animeId]);
+  const matchingHistory = historyItem?.episodeId === episodeId ? historyItem : undefined;
+
+  const currentEpisode = useMemo(
+    () => episodes.find((episode) => episode.id === episodeId),
+    [episodes, episodeId]
+  );
+
+  const activeEpisodeTitle =
+    currentEpisode?.title ||
+    paramEpisodeTitle ||
+    matchingHistory?.episodeTitle ||
+    `Episode ${currentEpisode?.number ?? episodeId}`;
+
+  const activeEpisodeDescription =
+    currentEpisode?.description || paramEpisodeDescription || matchingHistory?.episodeDescription;
+
+  const activeEpisodeThumbnail =
+    currentEpisode?.image ||
+    paramEpisodeThumbnail ||
+    matchingHistory?.episodeThumbnail ||
+    animeImage;
+
+  const playerMetadata = useMemo(
+    () => ({
+      title: activeEpisodeTitle,
+      subtitle: displayTitle,
+      artist: displayTitle,
+      description: activeEpisodeDescription,
+      imageUri: activeEpisodeThumbnail,
+    }),
+    [activeEpisodeTitle, displayTitle, activeEpisodeDescription, activeEpisodeThumbnail]
+  );
 
   const {
     videoRef,
@@ -67,16 +149,27 @@ const WatchScreen = () => {
     handleVideoTracks,
     handleEnd,
     seekTo,
-  } = useVideoPlayer(animeId, episodeId, type, animeSlug);
+  } = useVideoPlayer(animeId, episodeId, type, animeSlug, playerMetadata);
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {
       router.back();
       return;
     }
-
     router.replace({ pathname: '/anime/[id]', params: { id: animeId } });
   }, [animeId, router]);
+
+  const handleBack = useCallback(() => {
+    if (usePlayerStore.getState().isModalVisible) {
+      usePlayerStore.getState().setIsModalVisible(false);
+      return;
+    }
+    if (usePlayerStore.getState().isFullscreen) {
+      usePlayerStore.getState().setIsFullscreen(false);
+      return;
+    }
+    handleExit();
+  }, [handleExit]);
 
   const {
     controlsAnim,
@@ -88,18 +181,8 @@ const WatchScreen = () => {
     handleVideoTap,
   } = usePlayerControls(seekTo, handleExit);
 
-  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
-  const episodes = episodeListData ?? [];
-
-  // The episode thumbnail from the AniList streaming episodes (already merged
-  // by useEpisodeList). Used to persist a scene thumbnail in history.
-  const currentEpisodeThumbnail = useMemo(
-    () => episodes.find((ep) => ep.id === episodeId)?.image,
-    [episodes, episodeId]
-  );
-
   // -----------------------------------------------------------------------
-  // Zustand selectors (only what the screen itself needs)
+  // Zustand selectors
   // -----------------------------------------------------------------------
 
   const isFullscreen = usePlayerStore((s) => s.isFullscreen);
@@ -107,12 +190,14 @@ const WatchScreen = () => {
   const isMuted = usePlayerStore((s) => s.isMuted);
   const currentTime = usePlayerStore((s) => s.currentTime);
   const subtitleCues = usePlayerStore((s) => s.subtitleCues);
+  const isPiP = usePlayerStore((s) => s.isPiP);
   const setShowControls = usePlayerStore((s) => s.setShowControls);
   const setIsModalVisible = usePlayerStore((s) => s.setIsModalVisible);
+  const setIsPiP = usePlayerStore((s) => s.setIsPiP);
   const selectServer = usePlayerStore((s) => s.selectServer);
 
   // -----------------------------------------------------------------------
-  // Active subtitle cues (filtered by current time)
+  // Active subtitle cues
   // -----------------------------------------------------------------------
 
   const activeSubtitleCues = useMemo(
@@ -121,7 +206,7 @@ const WatchScreen = () => {
   );
 
   // -----------------------------------------------------------------------
-  // Up Next — the episode right after the one currently loaded
+  // Episode helpers
   // -----------------------------------------------------------------------
 
   const nextEpisode = useMemo(() => {
@@ -130,9 +215,32 @@ const WatchScreen = () => {
     return episodes[currentIndex + 1] ?? null;
   }, [episodes, episodeId]);
 
+  // Episode thumbnail for history
+  const currentEpisodeThumbnail = useMemo(
+    () => episodes.find((ep) => ep.id === episodeId)?.image,
+    [episodes, episodeId]
+  );
+
+  const pendingEpisodeNavigationRef = useRef<string | null>(null);
+  useEffect(() => {
+    pendingEpisodeNavigationRef.current = null;
+  }, [episodeId]);
+
   const goToEpisode = useCallback(
-    (target: { id: string; animeSlug?: string } | null) => {
-      if (!target) return;
+    (
+      target: {
+        id: string;
+        animeSlug?: string;
+        title?: string;
+        description?: string;
+        image?: string;
+        number?: string | number;
+      } | null
+    ) => {
+      if (!target || target.id === episodeId || pendingEpisodeNavigationRef.current === target.id) {
+        return;
+      }
+      pendingEpisodeNavigationRef.current = target.id;
       router.replace({
         pathname: '/anime/watch/[episodeId]',
         params: {
@@ -142,10 +250,13 @@ const WatchScreen = () => {
           type,
           animeTitle,
           animeImage,
+          episodeTitle: target.title,
+          episodeDescription: target.description,
+          episodeThumbnail: target.image,
         },
       });
     },
-    [router, animeId, animeSlug, type, animeTitle, animeImage]
+    [router, animeId, animeSlug, type, animeTitle, animeImage, episodeId]
   );
 
   const handleVideoEnd = useCallback(() => {
@@ -153,28 +264,20 @@ const WatchScreen = () => {
       goToEpisode(nextEpisode);
       return;
     }
-
     handleEnd();
   }, [goToEpisode, handleEnd, nextEpisode]);
 
   // -----------------------------------------------------------------------
-  // Progress Tracking (History)
+  // Progress Tracking
   // -----------------------------------------------------------------------
 
   const saveProgress = useHistoryStore((s) => s.saveProgress);
   const lastSavedProgressRef = useRef<{ episodeId: string; second: number } | null>(null);
 
-  // Persist the current title at a useful cadence. This is intentionally episode
-  // progress, not a watched marker: choosing the next episode must never mark the
-  // previous one as completed.
   useEffect(() => {
     const second = Math.floor(currentTime);
     const previous = lastSavedProgressRef.current;
-
-    if (second <= 0 || (previous?.episodeId === episodeId && second - previous.second < 5)) {
-      return;
-    }
-
+    if (second <= 0 || (previous?.episodeId === episodeId && second - previous.second < 5)) return;
     lastSavedProgressRef.current = { episodeId, second };
     saveProgress({
       animeId,
@@ -182,8 +285,10 @@ const WatchScreen = () => {
       animeTitle: animeTitle || formatIdToTitle(animeId),
       animeImage: animeImage || '',
       episodeId,
-      episodeNumber: episodeId,
-      episodeThumbnail: currentEpisodeThumbnail || undefined,
+      episodeNumber: currentEpisode?.number ? String(currentEpisode.number) : episodeId,
+      episodeTitle: activeEpisodeTitle,
+      episodeDescription: activeEpisodeDescription,
+      episodeThumbnail: activeEpisodeThumbnail || undefined,
       progress: currentTime,
       duration: usePlayerStore.getState().duration || 0,
     });
@@ -192,15 +297,50 @@ const WatchScreen = () => {
     animeSlug,
     animeImage,
     animeTitle,
-    currentEpisodeThumbnail,
+    activeEpisodeThumbnail,
+    activeEpisodeTitle,
+    activeEpisodeDescription,
+    currentEpisode?.number,
     currentTime,
     episodeId,
     saveProgress,
   ]);
 
   // -----------------------------------------------------------------------
-  // Server selection handler
+  // Action handlers
   // -----------------------------------------------------------------------
+
+  const handleShare = useCallback(async () => {
+    try {
+      await Share.share({
+        message: `Watching "${animeTitle || formatIdToTitle(animeId)}" — Episode ${
+          currentEpisode?.number ?? episodeId
+        } on Daichi`,
+        title: animeTitle || formatIdToTitle(animeId),
+      });
+    } catch {
+      // user dismissed
+    }
+  }, [animeTitle, animeId, currentEpisode, episodeId]);
+
+  const handleDownload = useCallback(() => {
+    Alert.alert('Download', 'Download functionality coming soon!', [{ text: 'OK' }]);
+  }, []);
+
+  const handleEnterPiP = useCallback(() => {
+    try {
+      if (videoRef.current?.enterPictureInPicture) {
+        videoRef.current.enterPictureInPicture();
+      } else {
+        Alert.alert(
+          'Picture-in-Picture',
+          'Picture-in-Picture is not available on this device or configuration.'
+        );
+      }
+    } catch (err) {
+      console.warn('[WatchScreen] Failed to enter PiP:', err);
+    }
+  }, [videoRef]);
 
   const handleSelectServer = useCallback(
     (index: number) => {
@@ -242,32 +382,15 @@ const WatchScreen = () => {
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.bg }}>
       <StatusBar hidden={isFullscreen} style="light" />
-      <Stack.Screen
-        options={{
-          headerShown: !isFullscreen,
-          headerLeft: () => (
-            <ScalePressable onPress={handleExit} style={{ padding: 8 }} scaleTo={0.96}>
-              <ArrowLeft size={24} color={COLORS.text} />
-            </ScalePressable>
-          ),
-          headerStyle: { backgroundColor: COLORS.surface },
-          headerTitleStyle: { color: COLORS.text },
-          headerTitle: `Episode ${episodeId}`,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Player container — resizes between inline and fullscreen without
-          remounting the <Video>, so toggling never reloads the stream.
-          Kept OUTSIDE the scrollable episode list on purpose: it needs to
-          stay a normal-flow sibling so its `position: absolute` fullscreen
-          fill still covers the whole screen instead of just scrolling away
-          inside a list header. */}
+      {/* ── Video Player ─────────────────────────────────────────────── */}
       <View
         style={[
           { backgroundColor: COLORS.bg, overflow: 'hidden' },
           isFullscreen
             ? [StyleSheet.absoluteFill, { zIndex: 1000 }]
-            : { height: 256, width: '100%' },
+            : { height: 236, width: '100%', marginTop: insets.top },
         ]}
         onLayout={(e) => {
           playerWidthRef.current = e.nativeEvent.layout.width;
@@ -281,6 +404,11 @@ const WatchScreen = () => {
           paused={!isPlaying || !isSubtitleReady}
           muted={isMuted}
           rate={1.0}
+          playInBackground
+          showNotificationControls
+          preventsDisplaySleepDuringVideoPlayback
+          enterPictureInPictureOnLeave
+          onPictureInPictureStatusChanged={(e) => setIsPiP(e.isActive)}
           onProgress={handleProgress}
           onEnd={handleVideoEnd}
           onError={handleError}
@@ -291,18 +419,16 @@ const WatchScreen = () => {
           resizeMode={resizeMode.key}
           ignoreSilentSwitch="ignore"
         />
-
-        {/* Tap target for single/double tap */}
         <Pressable className="absolute inset-0" onPress={handleVideoTap} />
-
-        {/* Controls overlay */}
         <PlayerOverlay
           episodeId={episodeId}
-          animeTitle={animeTitle || formatIdToTitle(animeId)}
+          animeTitle={displayTitle}
           controlsAnim={controlsAnim}
           seekPanResponder={seekPanResponder}
           activeSubtitleCues={activeSubtitleCues}
           onCycleResizeMode={handleCycleResizeMode}
+          onEnterPiP={handleEnterPiP}
+          onBack={handleBack}
           onSeekBackward={() => {
             seekTo(currentTime - 10);
             triggerFlash({ kind: 'seek-left', label: '10s' });
@@ -318,26 +444,158 @@ const WatchScreen = () => {
         />
       </View>
 
-      {/* vertical card */}
-      <View style={{ flex: 1, display: isFullscreen ? 'none' : 'flex' }}>
-        <EpisodeList
-          episodes={episodes}
-          currentEpisodeId={episodeId}
-          fallbackImage={animeImage}
-          onSelectEpisode={(ep) => goToEpisode(ep)}
-          ListHeaderComponent={
-            <UpNextCard
-              episode={nextEpisode}
-              onPlay={() => goToEpisode(nextEpisode)}
-              autoplaySeconds={0}
+      {/* ── Content Container: Animated Sliding Panels (Episodes & Chat) ── */}
+      <View
+        style={{ flex: 1, overflow: 'hidden', display: isFullscreen || isPiP ? 'none' : 'flex' }}>
+        <Animated.View
+          style={{
+            flex: 1,
+            flexDirection: 'row',
+            width: screenWidth * 2,
+            transform: [
+              {
+                translateX: dockAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -screenWidth],
+                }),
+              },
+            ],
+          }}>
+          {/* Panel 1: Episodes List + Meta Info */}
+          <Animated.View
+            style={{
+              width: screenWidth,
+              flex: 1,
+              opacity: dockAnim.interpolate({
+                inputRange: [0, 0.7, 1],
+                outputRange: [1, 0.6, 0.2],
+              }),
+            }}>
+            {/* ── Compact Info section (only on Episodes tab) ─ */}
+            <View style={styles.infoSection}>
+              {/* Header: Title block on left + Centered Action buttons on right */}
+              <View style={styles.infoHeader}>
+                <View style={styles.titleBlock}>
+                  <Text style={styles.episodeTitle}>{activeEpisodeTitle}</Text>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.animeSubtitle}>
+                    {displayTitle}
+                  </Text>
+                </View>
+
+                <View style={styles.actionRow}>
+                  <ScalePressable
+                    style={styles.actionPill}
+                    scaleTo={0.92}
+                    haptic="light"
+                    onPress={handleShare}>
+                    <Ionicons name="share-outline" size={13} color={COLORS.textMuted} />
+                    <Text style={styles.actionPillLabel}>Share</Text>
+                  </ScalePressable>
+
+                  <ScalePressable
+                    style={styles.actionPill}
+                    scaleTo={0.92}
+                    haptic="light"
+                    onPress={handleDownload}>
+                    <Ionicons name="download-outline" size={13} color={COLORS.textMuted} />
+                    <Text style={styles.actionPillLabel}>Download</Text>
+                  </ScalePressable>
+                </View>
+              </View>
+
+              {/* Episode description — shown in full */}
+              {activeEpisodeDescription ? (
+                <Text style={styles.episodeDescription}>{activeEpisodeDescription}</Text>
+              ) : null}
+            </View>
+
+            <EpisodeList
+              episodes={episodes}
+              currentEpisodeId={episodeId}
+              fallbackImage={animeImage}
+              bottomPadding={bottomDockSpace}
+              onSelectEpisode={(ep) => goToEpisode(ep)}
             />
-          }
-        />
+          </Animated.View>
+
+          {/* Panel 2: Episode Discussion / Chat */}
+          <Animated.View
+            style={{
+              width: screenWidth,
+              flex: 1,
+              opacity: dockAnim.interpolate({
+                inputRange: [0, 0.3, 1],
+                outputRange: [0.2, 0.6, 1],
+              }),
+            }}>
+            <ScrollView
+              contentContainerStyle={[styles.chatContent, { paddingBottom: bottomDockSpace }]}
+              showsVerticalScrollIndicator={false}>
+              <EpisodeDiscussion
+                animeId={animeId}
+                episodeId={currentEpisode?.number ? String(currentEpisode.number) : episodeId}
+                episodeTitle={currentEpisode?.title}
+              />
+            </ScrollView>
+          </Animated.View>
+        </Animated.View>
+
+        {/* ── Floating bottom dock: Episodes | Chat ────── */}
+        <View style={[styles.floatingDock, { bottom: Math.max(insets.bottom, 14) }]}>
+          {/* Animated sliding background pill */}
+          <Animated.View
+            style={[
+              styles.dockIndicator,
+              {
+                transform: [
+                  {
+                    translateX: dockAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 108],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+
+          <ScalePressable
+            accessibilityRole="tab"
+            accessibilityLabel="Episodes"
+            onPress={() => setActivePanel('episodes')}
+            scaleTo={0.94}
+            haptic="light"
+            style={styles.dockItem}>
+            <Ionicons
+              name="list-outline"
+              size={16}
+              color={activePanel === 'episodes' ? '#0a0f0a' : COLORS.textMuted}
+            />
+            <Text style={[styles.dockLabel, activePanel === 'episodes' && styles.dockLabelActive]}>
+              Episodes
+            </Text>
+          </ScalePressable>
+
+          <ScalePressable
+            accessibilityRole="tab"
+            accessibilityLabel="Chat"
+            onPress={() => setActivePanel('chat')}
+            scaleTo={0.94}
+            haptic="light"
+            style={styles.dockItem}>
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={16}
+              color={activePanel === 'chat' ? '#0a0f0a' : COLORS.textMuted}
+            />
+            <Text style={[styles.dockLabel, activePanel === 'chat' && styles.dockLabelActive]}>
+              Chat
+            </Text>
+          </ScalePressable>
+        </View>
       </View>
 
-      {/* Settings sheet lives OUTSIDE fullscreen player so it always
-          renders in normal portrait flow — sheet itself slides from
-          the true bottom of the screen */}
+      {/* Settings sheet */}
       <SettingsSheet
         sheetAnim={sheetAnim}
         servers={servers}
@@ -350,3 +608,113 @@ const WatchScreen = () => {
 };
 
 export default WatchScreen;
+
+const styles = StyleSheet.create({
+  // Info section
+  infoSection: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+    gap: 8,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  episodeTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 21,
+  },
+  animeSubtitle: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  episodeDescription: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '400',
+  },
+
+  // Action pills
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  actionPillLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Floating dock
+  floatingDock: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    padding: 4,
+    borderRadius: 28,
+    backgroundColor: 'rgba(14,19,14,0.97)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  dockIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    bottom: 4,
+    width: 108,
+    borderRadius: 20,
+    backgroundColor: COLORS.accent,
+  },
+  dockItem: {
+    width: 108,
+    height: 38,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    zIndex: 1,
+  },
+  dockLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  dockLabelActive: { color: '#0a0f0a' },
+
+  // Chat
+  chatContent: { flexGrow: 1 },
+});

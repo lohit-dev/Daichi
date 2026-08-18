@@ -1,20 +1,25 @@
 import { BottomSheetModal, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { ArrowDown2, ArrowUp2, Play, SearchNormal1 } from 'iconsax-react-native';
+import { ArrowDown2, ArrowUp2, SearchNormal1 } from 'iconsax-react-native';
 import { useCallback, useMemo, useRef, useState, RefObject } from 'react';
-import { View, Text, ActivityIndicator, TextInput, Image, StyleSheet } from 'react-native';
+import { View, Text, ActivityIndicator, TextInput, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import EpisodeCard, { EpisodeItemData } from '../shared/EpisodeCard';
 import ScalePressable from '../shared/ScalePressable';
 
 import { useEpisodeList } from '~/hooks/useEpisodeList';
 
-type Episode = {
+type Episode = EpisodeItemData & {
+  episodeId: string;
+};
+
+export type EpisodePressPayload = {
   episodeId: string;
   animeSlug?: string;
-  number: number;
-  title: string;
-  isFiller: boolean;
+  title?: string;
+  description?: string;
   image?: string;
+  number?: string | number;
 };
 
 type EpisodeListSheetProps = {
@@ -23,16 +28,13 @@ type EpisodeListSheetProps = {
   type: 'sub' | 'dub';
   fallbackImage?: string;
   bottomSheetRef: RefObject<BottomSheetModal>;
-  onEpisodePress: (episode: { episodeId: string; animeSlug?: string }) => void;
+  onEpisodePress: (episode: EpisodePressPayload) => void;
   onDismiss?: () => void;
   enablePanDownToClose?: boolean;
   enableBackdropPress?: boolean;
 };
 
 type SortOrder = 'asc' | 'desc';
-
-const CARD_IMG_WIDTH = 110;
-const CARD_IMG_HEIGHT = 70;
 
 const EpisodeListSheet = ({
   animeId,
@@ -61,10 +63,12 @@ const EpisodeListSheet = ({
   const episodes: Episode[] = useMemo(() => {
     if (!episodeData) return [];
     return episodeData.map((ep) => ({
+      id: ep.id,
       episodeId: ep.id,
       animeSlug: ep.animeSlug,
-      number: parseFloat(ep.number) || 0,
-      title: ep.title || `Episode ${ep.number}`,
+      number: ep.number,
+      title: ep.title,
+      description: ep.description,
       isFiller: false,
       image: ep.image,
     }));
@@ -77,11 +81,15 @@ const EpisodeListSheet = ({
       result = result.filter(
         (episode) =>
           episode.number.toString().includes(searchQuery) ||
-          episode.title.toLowerCase().includes(searchQuery.toLowerCase())
+          episode.title?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    result.sort((a, b) => (sortOrder === 'asc' ? a.number - b.number : b.number - a.number));
+    result.sort((a, b) => {
+      const numA = parseFloat(String(a.number)) || 0;
+      const numB = parseFloat(String(b.number)) || 0;
+      return sortOrder === 'asc' ? numA - numB : numB - numA;
+    });
     return result;
   }, [episodes, searchQuery, sortOrder]);
 
@@ -93,7 +101,14 @@ const EpisodeListSheet = ({
     (episode: Episode) => {
       if (isSelectingEpisodeRef.current) return;
       isSelectingEpisodeRef.current = true;
-      onEpisodePress({ episodeId: episode.episodeId, animeSlug: episode.animeSlug });
+      onEpisodePress({
+        episodeId: episode.episodeId,
+        animeSlug: episode.animeSlug,
+        title: episode.title,
+        description: episode.description,
+        image: episode.image,
+        number: episode.number,
+      });
       bottomSheetRef.current?.dismiss?.();
     },
     [bottomSheetRef, onEpisodePress]
@@ -101,52 +116,14 @@ const EpisodeListSheet = ({
 
   const renderEpisodeCard = useCallback(
     ({ item, index }: { item: Episode; index: number }) => {
-      // The hook applies the cover image only after Kitsu and AniList have both
-      // had a chance to provide a scene thumbnail. Until then, stay neutral.
-      const thumbnail = item.image;
-
       return (
         <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(280)}>
-          <ScalePressable
+          <EpisodeCard
             testID={`episode-card-${index}`}
-            style={[styles.card, item.isFiller && styles.cardFiller]}
-            scaleTo={0.97}
-            onPress={() => handleEpisodePress(item)}>
-            {/* Thumbnail */}
-            <View style={styles.thumbContainer}>
-              {thumbnail ? (
-                <Image source={{ uri: thumbnail }} style={styles.thumb} resizeMode="cover" />
-              ) : (
-                <View style={[styles.thumb, styles.thumbPlaceholder]} />
-              )}
-
-              {/* EP number overlay */}
-              <View style={styles.epBadge}>
-                <Text style={styles.epBadgeText}>EP {item.number}</Text>
-              </View>
-
-              {/* Filler stripe */}
-              {item.isFiller && <View style={styles.fillerStripe} />}
-            </View>
-
-            {/* Text content */}
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-
-              {item.isFiller && (
-                <View style={styles.fillerBadge}>
-                  <Text style={styles.fillerBadgeText}>Filler</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Play button */}
-            <View style={styles.playBtn}>
-              <Play size={16} color="#0a0a0a" variant="Bold" />
-            </View>
-          </ScalePressable>
+            item={item}
+            fallbackImage={fallbackImage}
+            onPress={() => handleEpisodePress(item)}
+          />
         </Animated.View>
       );
     },
@@ -319,90 +296,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     gap: 10,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-    padding: 10,
-  },
-  cardFiller: {
-    borderColor: 'rgba(239,68,68,0.3)',
-  },
-  thumbContainer: {
-    width: CARD_IMG_WIDTH,
-    height: CARD_IMG_HEIGHT,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#1e1f1c',
-    flexShrink: 0,
-  },
-  thumb: {
-    width: CARD_IMG_WIDTH,
-    height: CARD_IMG_HEIGHT,
-  },
-  thumbPlaceholder: {
-    backgroundColor: '#252520',
-  },
-  epBadge: {
-    position: 'absolute',
-    bottom: 5,
-    left: 6,
-    backgroundColor: 'rgba(7,8,6,0.82)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 7,
-  },
-  epBadgeText: {
-    color: '#bef264',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  fillerStripe: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 4,
-    bottom: 0,
-    backgroundColor: '#ef4444',
-  },
-  cardBody: {
-    flex: 1,
-    gap: 6,
-    justifyContent: 'center',
-  },
-  cardTitle: {
-    color: '#f0f0ee',
-    fontFamily: 'Salsa-Regular',
-    fontSize: 13.5,
-    lineHeight: 19,
-  },
-  fillerBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(239,68,68,0.18)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  fillerBadgeText: {
-    color: '#f87171',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  playBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#bef264',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   centered: {
     flex: 1,

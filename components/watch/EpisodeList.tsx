@@ -1,171 +1,176 @@
-import { useRef, useState } from 'react';
-import type { ReactElement } from 'react';
-import { FlatList, Image, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import EpisodeCard, { EpisodeItemData } from '~/components/shared/EpisodeCard';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
 
-export type Episode = {
-  id: string;
-  number: string;
-  title: string;
-  image?: string;
-  animeSlug?: string;
-};
+export type Episode = EpisodeItemData;
 
 type EpisodeListProps = {
   episodes: Episode[];
   currentEpisodeId: string;
   fallbackImage?: string;
   onSelectEpisode: (episode: Episode) => void;
-  ListHeaderComponent?: ReactElement | null;
+  bottomPadding?: number;
 };
 
-// row height used for getItemLayout so scrollToIndex works even on a list
-// that hasn't rendered that far yet (matters once you're at One Piece scale)
-const ROW_HEIGHT = 84;
+// Row height for getItemLayout (card 88 + marginBottom 8)
+const ROW_HEIGHT = 96;
 
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 const EpisodeList = ({
   episodes,
   currentEpisodeId,
+  fallbackImage,
   onSelectEpisode,
-  ListHeaderComponent,
+  bottomPadding = 40,
 }: EpisodeListProps) => {
   const listRef = useRef<FlatList<Episode>>(null);
   const [jumpValue, setJumpValue] = useState('');
+  const activeIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId);
 
-  const handleJump = () => {
+  // Scroll to the currently playing episode whenever active episode changes
+  useEffect(() => {
+    if (activeIndex < 0 || episodes.length === 0) return;
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToIndex({
+        index: activeIndex,
+        animated: true,
+        viewPosition: 0.2,
+      });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [activeIndex, currentEpisodeId, episodes.length]);
+
+  const handleJump = useCallback(() => {
     const target = Number(jumpValue);
     if (!target) return;
     const index = episodes.findIndex((ep) => Number(ep.number) === target);
     if (index >= 0) {
       listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
     }
-  };
+  }, [episodes, jumpValue]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: Episode }) => (
+      <EpisodeCard
+        item={item}
+        isCurrent={item.id === currentEpisodeId}
+        fallbackImage={fallbackImage}
+        onPress={onSelectEpisode}
+        style={styles.cardItem}
+      />
+    ),
+    [currentEpisodeId, fallbackImage, onSelectEpisode]
+  );
 
   return (
-    <FlatList
-      ref={listRef}
-      data={episodes}
-      keyExtractor={(item) => item.id}
-      style={{ flex: 1 }}
-      getItemLayout={(_, index) => ({ length: ROW_HEIGHT, offset: ROW_HEIGHT * index, index })}
-      onScrollToIndexFailed={({ index }) => {
-        setTimeout(() => listRef.current?.scrollToIndex({ index, animated: true }), 300);
-      }}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      initialNumToRender={12}
-      maxToRenderPerBatch={12}
-      windowSize={7}
-      removeClippedSubviews
-      ListHeaderComponent={
-        <>
-          {ListHeaderComponent}
+    <View style={{ flex: 1 }}>
+      {/* Header — "Episodes (N)" + jump field */}
+      <View style={styles.listHeader}>
+        <Text style={styles.sectionTitle}>
+          Episodes <Text style={styles.sectionCount}>({episodes.length})</Text>
+        </Text>
 
-          <View style={{ paddingHorizontal: 20, marginTop: 24, marginBottom: 12 }}>
-            <Text style={{ color: COLORS.text, fontSize: 16, fontWeight: '800' }}>
-              Episodes{' '}
-              <Text style={{ color: COLORS.textMuted, fontWeight: '600' }}>
-                ({episodes.length})
-              </Text>
-            </Text>
-
-            {episodes.length > 30 && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  marginTop: 12,
-                  backgroundColor: COLORS.surface,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: COLORS.stroke ?? 'rgba(255,255,255,0.08)',
-                  paddingHorizontal: 12,
-                }}>
-                <TextInput
-                  value={jumpValue}
-                  onChangeText={setJumpValue}
-                  onSubmitEditing={handleJump}
-                  placeholder="Jump to episode…"
-                  placeholderTextColor={COLORS.textMuted}
-                  keyboardType="number-pad"
-                  returnKeyType="go"
-                  style={{ flex: 1, color: COLORS.text, height: 42 }}
-                />
-                <ScalePressable onPress={handleJump} scaleTo={0.96}>
-                  <Text style={{ color: COLORS.accent, fontWeight: '700', fontSize: 12 }}>Go</Text>
-                </ScalePressable>
-              </View>
-            )}
+        {episodes.length > 30 && (
+          <View style={styles.jumpBox}>
+            <TextInput
+              value={jumpValue}
+              onChangeText={setJumpValue}
+              onSubmitEditing={handleJump}
+              placeholder="#"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="number-pad"
+              returnKeyType="go"
+              style={styles.jumpInput}
+            />
+            <ScalePressable onPress={handleJump} scaleTo={0.92}>
+              <Text style={styles.jumpGo}>Go</Text>
+            </ScalePressable>
           </View>
-        </>
-      }
-      renderItem={({ item }) => {
-        const isCurrent = item.id === currentEpisodeId;
+        )}
+      </View>
 
-        return (
-          <ScalePressable
-            onPress={() => onSelectEpisode(item)}
-            scaleTo={0.99}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 12,
-              marginHorizontal: 20,
-              marginBottom: 10,
-              height: ROW_HEIGHT - 10,
-              backgroundColor: COLORS.surface,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: isCurrent ? COLORS.accent : (COLORS.stroke ?? 'rgba(255,255,255,0.08)'),
-              padding: 10,
-            }}>
-            <View
-              style={{
-                width: 88,
-                height: 64,
-                borderRadius: 10,
-                overflow: 'hidden',
-                backgroundColor: COLORS.bg,
-              }}>
-              {item.image ? (
-                <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
-              ) : null}
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 4,
-                  left: 4,
-                  backgroundColor: 'rgba(7,8,6,0.75)',
-                  paddingHorizontal: 6,
-                  paddingVertical: 1,
-                  borderRadius: 6,
-                }}>
-                <Text style={{ color: COLORS.accent, fontSize: 10, fontWeight: '800' }}>
-                  EP {item.number}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text
-                numberOfLines={2}
-                style={{ color: COLORS.text, fontSize: 13.5, fontWeight: '600' }}>
-                {item.title}
-              </Text>
-              {isCurrent && (
-                <Text
-                  style={{ color: COLORS.accent, fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                  Now playing
-                </Text>
-              )}
-            </View>
-          </ScalePressable>
-        );
-      }}
-    />
+      <FlatList
+        ref={listRef}
+        data={episodes}
+        keyExtractor={(item) => item.id}
+        style={{ flex: 1 }}
+        getItemLayout={(_, index) => ({
+          length: ROW_HEIGHT,
+          offset: ROW_HEIGHT * index,
+          index,
+        })}
+        onScrollToIndexFailed={({ index }) => {
+          setTimeout(
+            () => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 }),
+            350
+          );
+        }}
+        contentContainerStyle={{ paddingBottom: bottomPadding, paddingTop: 4 }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
+        renderItem={renderItem}
+      />
+    </View>
   );
 };
 
 export default EpisodeList;
+
+const styles = StyleSheet.create({
+  listHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 14.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  sectionCount: {
+    color: COLORS.textMuted,
+    fontSize: 13.5,
+    fontWeight: '600',
+  },
+  jumpBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 0,
+    height: 30,
+  },
+  jumpInput: {
+    color: COLORS.text,
+    width: 36,
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 0,
+    height: 30,
+  },
+  jumpGo: {
+    color: COLORS.accent,
+    fontWeight: '800',
+    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  cardItem: {
+    marginHorizontal: 14,
+    marginBottom: 8,
+  },
+});

@@ -781,6 +781,100 @@ type RawStreamingEpisode = {
   site?: string | null;
 };
 
+const MEDIA_THREADS_QUERY = `
+  query MediaThreads($mediaId: Int!) {
+    Page(page: 1, perPage: 50) {
+      threads(mediaCategoryId: $mediaId, sort: REPLIED_AT_DESC) {
+        id
+        title
+        body
+        replyCount
+        createdAt
+        user { name avatar { medium } }
+      }
+    }
+  }
+`;
+
+export type AniListDiscussionThread = {
+  id: number;
+  title: string;
+  body: string;
+  replyCount: number;
+  createdAt: number;
+  user: { name: string; avatar?: string };
+};
+
+const toThreadText = (value?: string | null) =>
+  (value ?? '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * AniList exposes discussions per anime, not a first-class per-episode thread
+ * API. This returns episode-matching threads first, followed by recent anime
+ * community threads so the UI can label the distinction honestly.
+ */
+export const fetchAniListEpisodeDiscussion = async (
+  animeId: string,
+  episodeNumber: string,
+  episodeTitle?: string
+): Promise<{
+  episodeThreads: AniListDiscussionThread[];
+  communityThreads: AniListDiscussionThread[];
+}> => {
+  const mediaId = Number(animeId);
+  if (!Number.isInteger(mediaId) || mediaId <= 0)
+    return { episodeThreads: [], communityThreads: [] };
+
+  const data = await queryAniList<{
+    Page: {
+      threads: {
+        id: number;
+        title?: string | null;
+        body?: string | null;
+        replyCount?: number | null;
+        createdAt?: number | null;
+        user?: { name?: string | null; avatar?: { medium?: string | null } | null } | null;
+      }[];
+    };
+  }>(MEDIA_THREADS_QUERY, { mediaId });
+
+  const titleWords = (episodeTitle ?? '')
+    .toLowerCase()
+    .split(/\W+/)
+    .filter((word) => word.length > 4)
+    .slice(0, 3);
+  const episodePattern = new RegExp(
+    `\\bepisode\\s*${episodeNumber}\\b|\\bep\\.?\\s*${episodeNumber}\\b`,
+    'i'
+  );
+  const mapped = data.Page.threads.map((thread) => ({
+    id: thread.id,
+    title: thread.title?.trim() || 'Untitled discussion',
+    body: toThreadText(thread.body),
+    replyCount: thread.replyCount ?? 0,
+    createdAt: thread.createdAt ?? 0,
+    user: {
+      name: thread.user?.name || 'AniList user',
+      avatar: thread.user?.avatar?.medium || undefined,
+    },
+  }));
+  const episodeThreads = mapped.filter((thread) => {
+    const searchable = `${thread.title} ${thread.body}`.toLowerCase();
+    return episodePattern.test(searchable) || titleWords.some((word) => searchable.includes(word));
+  });
+
+  return {
+    episodeThreads: episodeThreads.slice(0, 3),
+    communityThreads: mapped
+      .filter((thread) => !episodeThreads.some((match) => match.id === thread.id))
+      .slice(0, 3),
+  };
+};
+
 type KitsuMappingResponse = {
   data?: {
     id?: string;
@@ -824,6 +918,11 @@ type KitsuEpisodeResponse = {
           relativeNumber?: number | string | null;
           canonicalTitle?: string | null;
           titles?: Record<string, string | null> | null;
+          description?: string | null;
+          synopsis?: string | null;
+          airDate?: string | null;
+          length?: number | null;
+          seasonNumber?: number | null;
           thumbnail?: KitsuEpisodeThumbnail;
         } | null;
       }[]
@@ -833,11 +932,24 @@ type KitsuEpisodeResponse = {
   } | null;
 };
 
+export type KitsuEpisodeMetadata = {
+  number: number;
+  title: string;
+  description?: string;
+  synopsis?: string;
+  airDate?: string;
+  length?: number;
+  seasonNumber?: number;
+  thumbnail?: string;
+};
+
 export type AniListEpisodeImage = {
   /** 1-based episode number parsed from the title string, or 0 if unparseable */
   number: number;
   title: string;
   thumbnail: string;
+  description?: string;
+  airDate?: string;
 };
 
 export const resolveKitsuAnimeIdFromMal = async (
@@ -895,6 +1007,31 @@ const resolveKitsuEpisodeThumbnail = (thumbnail: KitsuEpisodeThumbnail): string 
   return null;
 };
 
+const mapKitsuEpisodeMetadata = (
+  episode: NonNullable<KitsuEpisodeResponse['data']>[number]
+): KitsuEpisodeMetadata | null => {
+  const attributes = episode.attributes ?? {};
+  const rawNumber = Number(attributes.number ?? attributes.relativeNumber ?? 0);
+  const number = Number.isFinite(rawNumber) && rawNumber > 0 ? rawNumber : 0;
+  if (!number) return null;
+
+  const title =
+    (attributes.titles && (attributes.titles.en || attributes.titles.en_jp)) ||
+    attributes.canonicalTitle ||
+    `Episode ${number}`;
+
+  return {
+    number,
+    title,
+    description: attributes.description?.trim() || undefined,
+    synopsis: attributes.synopsis?.trim() || undefined,
+    airDate: attributes.airDate || undefined,
+    length: attributes.length ?? undefined,
+    seasonNumber: attributes.seasonNumber ?? undefined,
+    thumbnail: resolveKitsuEpisodeThumbnail(attributes.thumbnail) || undefined,
+  };
+};
+
 export const fetchKitsuEpisodeImagesByMalId = async (
   malId: number | string | null | undefined,
   maxPages = Number.POSITIVE_INFINITY
@@ -941,22 +1078,18 @@ export const fetchKitsuEpisodeImagePage = async (
     const payload = (await response.json()) as KitsuEpisodeResponse;
     const rawEpisodes = payload.data ?? [];
     const images = rawEpisodes
-      .map((ep) => {
-        const attributes = ep.attributes ?? {};
-        const rawNumber = Number(attributes.number ?? attributes.relativeNumber ?? 0);
-        const number = Number.isFinite(rawNumber) && rawNumber > 0 ? rawNumber : 0;
-        const thumbnail = resolveKitsuEpisodeThumbnail(attributes.thumbnail);
-
-        if (!thumbnail || !number) return null;
-
-        const title =
-          (attributes.titles && (attributes.titles.en || attributes.titles.en_jp)) ||
-          attributes.canonicalTitle ||
-          `Episode ${number}`;
-
-        return { number, title, thumbnail } satisfies AniListEpisodeImage;
-      })
-      .filter((episode): episode is AniListEpisodeImage => Boolean(episode));
+      .map(mapKitsuEpisodeMetadata)
+      .filter((episode): episode is KitsuEpisodeMetadata => Boolean(episode?.thumbnail))
+      .map(
+        (ep) =>
+          ({
+            number: ep.number,
+            title: ep.title,
+            thumbnail: ep.thumbnail!,
+            description: ep.description || ep.synopsis,
+            airDate: ep.airDate,
+          }) satisfies AniListEpisodeImage
+      );
 
     const totalCount = payload.meta?.count ?? 0;
     const hasMore =
@@ -969,6 +1102,34 @@ export const fetchKitsuEpisodeImagePage = async (
     };
   } catch {
     return { images: [] };
+  }
+};
+
+/**
+ * Fetches one Kitsu episode by its 1-based number. Keeping this request small
+ * avoids loading every episode of long-running anime just to populate the
+ * player metadata panel.
+ */
+export const fetchKitsuEpisodeDetails = async (
+  kitsuAnimeId: string,
+  episodeNumber: string
+): Promise<KitsuEpisodeMetadata | null> => {
+  const number = Number(episodeNumber);
+  if (!kitsuAnimeId || !Number.isFinite(number) || number <= 0) return null;
+
+  try {
+    const response = await fetch(
+      `https://kitsu.io/api/edge/anime/${encodeURIComponent(kitsuAnimeId)}/episodes?` +
+        `page%5Blimit%5D=1&page%5Boffset%5D=${Math.max(0, Math.floor(number) - 1)}&sort=number`,
+      { headers: { Accept: 'application/vnd.api+json' } }
+    );
+
+    if (!response.ok) return null;
+    const payload = (await response.json()) as KitsuEpisodeResponse;
+    const episode = payload.data?.map(mapKitsuEpisodeMetadata).find(Boolean) ?? null;
+    return episode?.number === number ? episode : null;
+  } catch {
+    return null;
   }
 };
 
