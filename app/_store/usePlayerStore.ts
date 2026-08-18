@@ -48,6 +48,7 @@ interface PlayerState {
   // UI controls
   showControls: boolean;
   isFullscreen: boolean;
+  isPiP: boolean;
   isLocked: boolean;
   isModalVisible: boolean;
   activeTab: 'servers' | 'subtitles' | 'quality';
@@ -86,6 +87,7 @@ interface PlayerActions {
   setShowControls: (show: boolean) => void;
   toggleControls: () => void;
   setIsFullscreen: (fs: boolean) => void;
+  setIsPiP: (pip: boolean) => void;
   setIsLocked: (locked: boolean) => void;
   setIsModalVisible: (visible: boolean) => void;
   setActiveTab: (tab: 'servers' | 'subtitles' | 'quality') => void;
@@ -125,6 +127,7 @@ const initialState: PlayerState = {
 
   showControls: true,
   isFullscreen: false,
+  isPiP: false,
   isLocked: false,
   isModalVisible: false,
   activeTab: 'servers',
@@ -164,6 +167,7 @@ export const usePlayerStore = create<PlayerState & PlayerActions>()((set, get) =
   setShowControls: (show) => set({ showControls: show }),
   toggleControls: () => set((s) => ({ showControls: !s.showControls })),
   setIsFullscreen: (fs) => set({ isFullscreen: fs, showControls: true }),
+  setIsPiP: (pip) => set({ isPiP: pip }),
   setIsLocked: (locked) => set({ isLocked: locked }),
   setIsModalVisible: (visible) => set({ isModalVisible: visible }),
   setActiveTab: (tab) => set({ activeTab: tab }),

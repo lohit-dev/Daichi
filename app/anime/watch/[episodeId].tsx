@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft } from 'iconsax-react-native';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, ActivityIndicator, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 
 import { useHistoryStore } from '~/app/_store/useHistoryStore';
 import { usePlayerStore } from '~/app/_store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
+import EpisodeDiscussion from '~/components/watch/EpisodeDiscussion';
 import EpisodeList from '~/components/watch/EpisodeList';
 import PlayerOverlay from '~/components/watch/PlayerOverlay';
 import SettingsSheet from '~/components/watch/SettingsSheet';
@@ -20,6 +23,8 @@ import { useVideoPlayer } from '~/hooks/useVideoPlayer';
 
 const WatchScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [activePanel, setActivePanel] = useState<'episodes' | 'chat'>('episodes');
   const { episodeId, animeId, animeSlug, type, animeTitle, animeImage } = useLocalSearchParams<{
     episodeId: string;
     animeId: string;
@@ -90,6 +95,7 @@ const WatchScreen = () => {
 
   const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
   const episodes = episodeListData ?? [];
+  const bottomDockSpace = insets.bottom + 92;
 
   // The episode thumbnail from the AniList streaming episodes (already merged
   // by useEpisodeList). Used to persist a scene thumbnail in history.
@@ -107,8 +113,10 @@ const WatchScreen = () => {
   const isMuted = usePlayerStore((s) => s.isMuted);
   const currentTime = usePlayerStore((s) => s.currentTime);
   const subtitleCues = usePlayerStore((s) => s.subtitleCues);
+  const isPiP = usePlayerStore((s) => s.isPiP);
   const setShowControls = usePlayerStore((s) => s.setShowControls);
   const setIsModalVisible = usePlayerStore((s) => s.setIsModalVisible);
+  const setIsPiP = usePlayerStore((s) => s.setIsPiP);
   const selectServer = usePlayerStore((s) => s.selectServer);
 
   // -----------------------------------------------------------------------
@@ -129,10 +137,22 @@ const WatchScreen = () => {
     if (currentIndex === -1) return null;
     return episodes[currentIndex + 1] ?? null;
   }, [episodes, episodeId]);
+  const currentEpisode = useMemo(
+    () => episodes.find((episode) => episode.id === episodeId),
+    [episodes, episodeId]
+  );
+  const pendingEpisodeNavigationRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    pendingEpisodeNavigationRef.current = null;
+  }, [episodeId]);
 
   const goToEpisode = useCallback(
     (target: { id: string; animeSlug?: string } | null) => {
-      if (!target) return;
+      if (!target || target.id === episodeId || pendingEpisodeNavigationRef.current === target.id) {
+        return;
+      }
+      pendingEpisodeNavigationRef.current = target.id;
       router.replace({
         pathname: '/anime/watch/[episodeId]',
         params: {
@@ -281,6 +301,8 @@ const WatchScreen = () => {
           paused={!isPlaying || !isSubtitleReady}
           muted={isMuted}
           rate={1.0}
+          enterPictureInPictureOnLeave
+          onPictureInPictureStatusChanged={(e) => setIsPiP(e.isActive)}
           onProgress={handleProgress}
           onEnd={handleVideoEnd}
           onError={handleError}
@@ -303,6 +325,9 @@ const WatchScreen = () => {
           seekPanResponder={seekPanResponder}
           activeSubtitleCues={activeSubtitleCues}
           onCycleResizeMode={handleCycleResizeMode}
+          onEnterPiP={() => {
+            videoRef.current?.enterPictureInPicture();
+          }}
           onSeekBackward={() => {
             seekTo(currentTime - 10);
             triggerFlash({ kind: 'seek-left', label: '10s' });
@@ -318,21 +343,70 @@ const WatchScreen = () => {
         />
       </View>
 
-      {/* vertical card */}
-      <View style={{ flex: 1, display: isFullscreen ? 'none' : 'flex' }}>
-        <EpisodeList
-          episodes={episodes}
-          currentEpisodeId={episodeId}
-          fallbackImage={animeImage}
-          onSelectEpisode={(ep) => goToEpisode(ep)}
-          ListHeaderComponent={
+      {/* Episode panel — hidden while in PiP or fullscreen */}
+      <View style={{ flex: 1, display: isFullscreen || isPiP ? 'none' : 'flex' }}>
+        {activePanel === 'episodes' ? (
+          <View style={{ flex: 1 }}>
+            {/* UpNext is PINNED — sits above the scrollable list, never scrolls */}
             <UpNextCard
               episode={nextEpisode}
               onPlay={() => goToEpisode(nextEpisode)}
               autoplaySeconds={0}
             />
-          }
-        />
+            {/* Thin divider */}
+            <View style={styles.divider} />
+            {/* Scrollable episode list — auto-scrolls to the active episode */}
+            <EpisodeList
+              episodes={episodes}
+              currentEpisodeId={episodeId}
+              fallbackImage={animeImage}
+              bottomPadding={bottomDockSpace}
+              onSelectEpisode={(ep) => goToEpisode(ep)}
+            />
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={[styles.chatContent, { paddingBottom: bottomDockSpace }]}
+            showsVerticalScrollIndicator={false}>
+            <EpisodeDiscussion
+              animeId={animeId}
+              episodeId={currentEpisode?.number || episodeId}
+              episodeTitle={currentEpisode?.title}
+            />
+          </ScrollView>
+        )}
+
+        {/* Floating bottom dock — Episodes | Chat */}
+        <View style={[styles.floatingDock, { bottom: Math.max(insets.bottom, 14) }]}>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activePanel === 'episodes' }}
+            onPress={() => setActivePanel('episodes')}
+            style={[styles.dockItem, activePanel === 'episodes' && styles.dockItemActive]}>
+            <Ionicons
+              name="list-outline"
+              size={16}
+              color={activePanel === 'episodes' ? COLORS.bg : COLORS.textMuted}
+            />
+            <Text style={[styles.dockLabel, activePanel === 'episodes' && styles.dockLabelActive]}>
+              Episodes
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activePanel === 'chat' }}
+            onPress={() => setActivePanel('chat')}
+            style={[styles.dockItem, activePanel === 'chat' && styles.dockItemActive]}>
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={16}
+              color={activePanel === 'chat' ? COLORS.bg : COLORS.textMuted}
+            />
+            <Text style={[styles.dockLabel, activePanel === 'chat' && styles.dockLabelActive]}>
+              Chat
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Settings sheet lives OUTSIDE fullscreen player so it always
@@ -350,3 +424,53 @@ const WatchScreen = () => {
 };
 
 export default WatchScreen;
+
+const styles = StyleSheet.create({
+  chatContent: { flexGrow: 1 },
+
+  // Thin separator between UpNext and episode list
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    marginHorizontal: 16,
+  },
+
+  // Bottom dock
+  floatingDock: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 3,
+    padding: 4,
+    borderRadius: 28,
+    backgroundColor: 'rgba(14,19,14,0.97)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    // Subtle shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  dockItem: {
+    minWidth: 108,
+    height: 38,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  dockItemActive: {
+    backgroundColor: COLORS.accent,
+  },
+  dockLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  dockLabelActive: { color: '#0a0f0a' },
+});

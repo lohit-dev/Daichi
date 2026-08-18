@@ -26,6 +26,7 @@ type PlayerOverlayProps = {
   onSeekBackward: () => void;
   onSeekForward: () => void;
   onShowSettings: () => void;
+  onEnterPiP: () => void;
 };
 
 const PlayerOverlay = ({
@@ -38,6 +39,7 @@ const PlayerOverlay = ({
   onSeekBackward,
   onSeekForward,
   onShowSettings,
+  onEnterPiP,
 }: PlayerOverlayProps) => {
   // Zustand selectors
   const showControls = usePlayerStore((s) => s.showControls);
@@ -53,6 +55,7 @@ const PlayerOverlay = ({
   const resizeModeIndex = usePlayerStore((s) => s.resizeModeIndex);
   const flash = usePlayerStore((s) => s.flash);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
+  const isPiP = usePlayerStore((s) => s.isPiP);
 
   // Actions
   const togglePlaying = usePlayerStore((s) => s.togglePlaying);
@@ -208,6 +211,15 @@ const PlayerOverlay = ({
                 icon={resizeMode.icon}
                 onPress={onCycleResizeMode}
               />
+              {/* PiP button — only show in non-fullscreen inline mode */}
+              {!isFullscreen && !isPiP && (
+                <TopButton
+                  size={topBtnSize}
+                  iconSize={topIconSize}
+                  icon="tv-outline"
+                  onPress={onEnterPiP}
+                />
+              )}
               <TopButton
                 size={topBtnSize}
                 iconSize={topIconSize}
