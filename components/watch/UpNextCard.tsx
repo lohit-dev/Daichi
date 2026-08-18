@@ -47,8 +47,7 @@ const UpNextCard = ({ episode, onPlay, autoplaySeconds = null }: UpNextCardProps
 
   if (!episode || cancelled) return null;
 
-  const autoplayLabel =
-    autoplaySeconds && autoplaySeconds > 0 ? `${secondsLeft}s` : null;
+  const autoplayLabel = autoplaySeconds && autoplaySeconds > 0 ? `${secondsLeft}s` : null;
 
   return (
     <View style={styles.container}>
@@ -106,10 +105,7 @@ const UpNextCard = ({ episode, onPlay, autoplaySeconds = null }: UpNextCardProps
 
       {/* Cancel autoplay */}
       {autoplaySeconds && autoplaySeconds > 0 ? (
-        <ScalePressable
-          onPress={() => setCancelled(true)}
-          style={styles.cancel}
-          scaleTo={0.96}>
+        <ScalePressable onPress={() => setCancelled(true)} style={styles.cancel} scaleTo={0.96}>
           <Text style={styles.cancelText}>Cancel autoplay</Text>
         </ScalePressable>
       ) : null}

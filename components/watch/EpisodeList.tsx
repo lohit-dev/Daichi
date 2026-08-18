@@ -93,7 +93,6 @@ const EpisodeList = ({
   const [jumpValue, setJumpValue] = useState('');
   const activeIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId);
 
-
   // Scroll to the currently playing episode whenever the episode or list changes
   useEffect(() => {
     if (activeIndex < 0 || episodes.length === 0) return;
@@ -121,8 +120,7 @@ const EpisodeList = ({
       {/* Header — "Episodes (N)" + jump field on same row */}
       <View style={styles.listHeader}>
         <Text style={styles.sectionTitle}>
-          Episodes{' '}
-          <Text style={styles.sectionCount}>({episodes.length})</Text>
+          Episodes <Text style={styles.sectionCount}>({episodes.length})</Text>
         </Text>
 
         {episodes.length > 30 && (
