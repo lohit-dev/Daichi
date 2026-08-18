@@ -13,13 +13,22 @@ type Episode = EpisodeItemData & {
   episodeId: string;
 };
 
+export type EpisodePressPayload = {
+  episodeId: string;
+  animeSlug?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  number?: string | number;
+};
+
 type EpisodeListSheetProps = {
   animeId: string;
   malId?: number | null;
   type: 'sub' | 'dub';
   fallbackImage?: string;
   bottomSheetRef: RefObject<BottomSheetModal>;
-  onEpisodePress: (episode: { episodeId: string; animeSlug?: string }) => void;
+  onEpisodePress: (episode: EpisodePressPayload) => void;
   onDismiss?: () => void;
   enablePanDownToClose?: boolean;
   enableBackdropPress?: boolean;
@@ -58,7 +67,7 @@ const EpisodeListSheet = ({
       episodeId: ep.id,
       animeSlug: ep.animeSlug,
       number: ep.number,
-      title: ep.title || `Episode ${ep.number}`,
+      title: ep.title,
       description: ep.description,
       isFiller: false,
       image: ep.image,
@@ -72,7 +81,7 @@ const EpisodeListSheet = ({
       result = result.filter(
         (episode) =>
           episode.number.toString().includes(searchQuery) ||
-          episode.title.toLowerCase().includes(searchQuery.toLowerCase())
+          episode.title?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -92,7 +101,14 @@ const EpisodeListSheet = ({
     (episode: Episode) => {
       if (isSelectingEpisodeRef.current) return;
       isSelectingEpisodeRef.current = true;
-      onEpisodePress({ episodeId: episode.episodeId, animeSlug: episode.animeSlug });
+      onEpisodePress({
+        episodeId: episode.episodeId,
+        animeSlug: episode.animeSlug,
+        title: episode.title,
+        description: episode.description,
+        image: episode.image,
+        number: episode.number,
+      });
       bottomSheetRef.current?.dismiss?.();
     },
     [bottomSheetRef, onEpisodePress]

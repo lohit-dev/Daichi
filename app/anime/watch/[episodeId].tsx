@@ -48,13 +48,26 @@ const WatchScreen = () => {
     }).start();
   }, [activePanel, dockAnim]);
 
-  const { episodeId, animeId, animeSlug, type, animeTitle, animeImage } = useLocalSearchParams<{
+  const {
+    episodeId,
+    animeId,
+    animeSlug,
+    type,
+    animeTitle,
+    animeImage,
+    episodeTitle: paramEpisodeTitle,
+    episodeDescription: paramEpisodeDescription,
+    episodeThumbnail: paramEpisodeThumbnail,
+  } = useLocalSearchParams<{
     episodeId: string;
     animeId: string;
     animeSlug?: string;
     type: 'sub' | 'dub';
-    animeTitle: string;
-    animeImage: string;
+    animeTitle?: string;
+    animeImage?: string;
+    episodeTitle?: string;
+    episodeDescription?: string;
+    episodeThumbnail?: string;
   }>();
 
   // Reset store on mount, clean up on unmount
@@ -67,12 +80,54 @@ const WatchScreen = () => {
       usePlayerStore.getState().setPendingSeek(historyItem.progress);
     }
 
-    return () => usePlayerStore.getState().reset();
+    return () => {
+      usePlayerStore.getState().setIsPlaying(false);
+      usePlayerStore.getState().reset();
+    };
   }, [animeId, episodeId]);
 
   // -----------------------------------------------------------------------
   // Hooks
   // -----------------------------------------------------------------------
+
+  const displayTitle = animeTitle || formatIdToTitle(animeId);
+  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
+  const episodes = episodeListData ?? [];
+  const bottomDockSpace = insets.bottom + 120;
+
+  const historyItem = useHistoryStore((s) => s.history[animeId]);
+  const matchingHistory = historyItem?.episodeId === episodeId ? historyItem : undefined;
+
+  const currentEpisode = useMemo(
+    () => episodes.find((episode) => episode.id === episodeId),
+    [episodes, episodeId]
+  );
+
+  const activeEpisodeTitle =
+    currentEpisode?.title ||
+    paramEpisodeTitle ||
+    matchingHistory?.episodeTitle ||
+    `Episode ${currentEpisode?.number ?? episodeId}`;
+
+  const activeEpisodeDescription =
+    currentEpisode?.description || paramEpisodeDescription || matchingHistory?.episodeDescription;
+
+  const activeEpisodeThumbnail =
+    currentEpisode?.image ||
+    paramEpisodeThumbnail ||
+    matchingHistory?.episodeThumbnail ||
+    animeImage;
+
+  const playerMetadata = useMemo(
+    () => ({
+      title: activeEpisodeTitle,
+      subtitle: displayTitle,
+      artist: displayTitle,
+      description: activeEpisodeDescription,
+      imageUri: activeEpisodeThumbnail,
+    }),
+    [activeEpisodeTitle, displayTitle, activeEpisodeDescription, activeEpisodeThumbnail]
+  );
 
   const {
     videoRef,
@@ -94,7 +149,7 @@ const WatchScreen = () => {
     handleVideoTracks,
     handleEnd,
     seekTo,
-  } = useVideoPlayer(animeId, episodeId, type, animeSlug);
+  } = useVideoPlayer(animeId, episodeId, type, animeSlug, playerMetadata);
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {
@@ -103,6 +158,18 @@ const WatchScreen = () => {
     }
     router.replace({ pathname: '/anime/[id]', params: { id: animeId } });
   }, [animeId, router]);
+
+  const handleBack = useCallback(() => {
+    if (usePlayerStore.getState().isModalVisible) {
+      usePlayerStore.getState().setIsModalVisible(false);
+      return;
+    }
+    if (usePlayerStore.getState().isFullscreen) {
+      usePlayerStore.getState().setIsFullscreen(false);
+      return;
+    }
+    handleExit();
+  }, [handleExit]);
 
   const {
     controlsAnim,
@@ -113,10 +180,6 @@ const WatchScreen = () => {
     handleCycleResizeMode,
     handleVideoTap,
   } = usePlayerControls(seekTo, handleExit);
-
-  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
-  const episodes = episodeListData ?? [];
-  const bottomDockSpace = insets.bottom + 80;
 
   // -----------------------------------------------------------------------
   // Zustand selectors
@@ -152,11 +215,6 @@ const WatchScreen = () => {
     return episodes[currentIndex + 1] ?? null;
   }, [episodes, episodeId]);
 
-  const currentEpisode = useMemo(
-    () => episodes.find((episode) => episode.id === episodeId),
-    [episodes, episodeId]
-  );
-
   // Episode thumbnail for history
   const currentEpisodeThumbnail = useMemo(
     () => episodes.find((ep) => ep.id === episodeId)?.image,
@@ -169,7 +227,16 @@ const WatchScreen = () => {
   }, [episodeId]);
 
   const goToEpisode = useCallback(
-    (target: { id: string; animeSlug?: string } | null) => {
+    (
+      target: {
+        id: string;
+        animeSlug?: string;
+        title?: string;
+        description?: string;
+        image?: string;
+        number?: string | number;
+      } | null
+    ) => {
       if (!target || target.id === episodeId || pendingEpisodeNavigationRef.current === target.id) {
         return;
       }
@@ -183,10 +250,13 @@ const WatchScreen = () => {
           type,
           animeTitle,
           animeImage,
+          episodeTitle: target.title,
+          episodeDescription: target.description,
+          episodeThumbnail: target.image,
         },
       });
     },
-    [router, animeId, animeSlug, type, animeTitle, animeImage]
+    [router, animeId, animeSlug, type, animeTitle, animeImage, episodeId]
   );
 
   const handleVideoEnd = useCallback(() => {
@@ -215,8 +285,10 @@ const WatchScreen = () => {
       animeTitle: animeTitle || formatIdToTitle(animeId),
       animeImage: animeImage || '',
       episodeId,
-      episodeNumber: episodeId,
-      episodeThumbnail: currentEpisodeThumbnail || undefined,
+      episodeNumber: currentEpisode?.number ? String(currentEpisode.number) : episodeId,
+      episodeTitle: activeEpisodeTitle,
+      episodeDescription: activeEpisodeDescription,
+      episodeThumbnail: activeEpisodeThumbnail || undefined,
       progress: currentTime,
       duration: usePlayerStore.getState().duration || 0,
     });
@@ -225,7 +297,10 @@ const WatchScreen = () => {
     animeSlug,
     animeImage,
     animeTitle,
-    currentEpisodeThumbnail,
+    activeEpisodeThumbnail,
+    activeEpisodeTitle,
+    activeEpisodeDescription,
+    currentEpisode?.number,
     currentTime,
     episodeId,
     saveProgress,
@@ -251,6 +326,21 @@ const WatchScreen = () => {
   const handleDownload = useCallback(() => {
     Alert.alert('Download', 'Download functionality coming soon!', [{ text: 'OK' }]);
   }, []);
+
+  const handleEnterPiP = useCallback(() => {
+    try {
+      if (videoRef.current?.enterPictureInPicture) {
+        videoRef.current.enterPictureInPicture();
+      } else {
+        Alert.alert(
+          'Picture-in-Picture',
+          'Picture-in-Picture is not available on this device or configuration.'
+        );
+      }
+    } catch (err) {
+      console.warn('[WatchScreen] Failed to enter PiP:', err);
+    }
+  }, [videoRef]);
 
   const handleSelectServer = useCallback(
     (index: number) => {
@@ -289,24 +379,10 @@ const WatchScreen = () => {
   // Render
   // -----------------------------------------------------------------------
 
-  const displayTitle = animeTitle || formatIdToTitle(animeId);
-
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.bg }}>
       <StatusBar hidden={isFullscreen} style="light" />
-      <Stack.Screen
-        options={{
-          headerShown: !isFullscreen,
-          headerLeft: () => (
-            <ScalePressable onPress={handleExit} style={{ padding: 8 }} scaleTo={0.96}>
-              <ArrowLeft size={24} color={COLORS.text} />
-            </ScalePressable>
-          ),
-          headerStyle: { backgroundColor: COLORS.surface },
-          headerTitleStyle: { color: COLORS.text },
-          headerTitle: `Episode ${currentEpisode?.number ?? episodeId}`,
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
 
       {/* ── Video Player ─────────────────────────────────────────────── */}
       <View
@@ -314,7 +390,7 @@ const WatchScreen = () => {
           { backgroundColor: COLORS.bg, overflow: 'hidden' },
           isFullscreen
             ? [StyleSheet.absoluteFill, { zIndex: 1000 }]
-            : { height: 256, width: '100%' },
+            : { height: 236, width: '100%', marginTop: insets.top },
         ]}
         onLayout={(e) => {
           playerWidthRef.current = e.nativeEvent.layout.width;
@@ -328,6 +404,9 @@ const WatchScreen = () => {
           paused={!isPlaying || !isSubtitleReady}
           muted={isMuted}
           rate={1.0}
+          playInBackground
+          showNotificationControls
+          preventsDisplaySleepDuringVideoPlayback
           enterPictureInPictureOnLeave
           onPictureInPictureStatusChanged={(e) => setIsPiP(e.isActive)}
           onProgress={handleProgress}
@@ -348,9 +427,8 @@ const WatchScreen = () => {
           seekPanResponder={seekPanResponder}
           activeSubtitleCues={activeSubtitleCues}
           onCycleResizeMode={handleCycleResizeMode}
-          onEnterPiP={() => {
-            videoRef.current?.enterPictureInPicture();
-          }}
+          onEnterPiP={handleEnterPiP}
+          onBack={handleBack}
           onSeekBackward={() => {
             seekTo(currentTime - 10);
             triggerFlash({ kind: 'seek-left', label: '10s' });
@@ -367,7 +445,8 @@ const WatchScreen = () => {
       </View>
 
       {/* ── Content Container: Animated Sliding Panels (Episodes & Chat) ── */}
-      <View style={{ flex: 1, overflow: 'hidden', display: isFullscreen || isPiP ? 'none' : 'flex' }}>
+      <View
+        style={{ flex: 1, overflow: 'hidden', display: isFullscreen || isPiP ? 'none' : 'flex' }}>
         <Animated.View
           style={{
             flex: 1,
@@ -394,16 +473,14 @@ const WatchScreen = () => {
             }}>
             {/* ── Compact Info section (only on Episodes tab) ─ */}
             <View style={styles.infoSection}>
-              {/* Full Episode Title — never ellipsized */}
-              <Text style={styles.episodeTitle}>
-                {currentEpisode?.title ?? displayTitle}
-              </Text>
-
-              {/* Sub-bar: Anime title on left, Action buttons on right */}
-              <View style={styles.subMetaRow}>
-                <Text numberOfLines={1} style={styles.animeSubtitle}>
-                  {displayTitle}
-                </Text>
+              {/* Header: Title block on left + Centered Action buttons on right */}
+              <View style={styles.infoHeader}>
+                <View style={styles.titleBlock}>
+                  <Text style={styles.episodeTitle}>{activeEpisodeTitle}</Text>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.animeSubtitle}>
+                    {displayTitle}
+                  </Text>
+                </View>
 
                 <View style={styles.actionRow}>
                   <ScalePressable
@@ -427,10 +504,8 @@ const WatchScreen = () => {
               </View>
 
               {/* Episode description — shown in full */}
-              {currentEpisode?.description ? (
-                <Text style={styles.episodeDescription}>
-                  {currentEpisode.description}
-                </Text>
+              {activeEpisodeDescription ? (
+                <Text style={styles.episodeDescription}>{activeEpisodeDescription}</Text>
               ) : null}
             </View>
 
@@ -542,26 +617,30 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.07)',
-    gap: 6,
+    gap: 8,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  titleBlock: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   episodeTitle: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    lineHeight: 22,
-  },
-  subMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
+    lineHeight: 21,
   },
   animeSubtitle: {
     color: 'rgba(255,255,255,0.45)',
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.3,
-    flex: 1,
   },
   episodeDescription: {
     color: 'rgba(255,255,255,0.7)',

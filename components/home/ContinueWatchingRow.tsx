@@ -67,6 +67,9 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
         animeSlug: item.animeSlug,
         animeTitle: item.animeTitle,
         animeImage: item.animeImage,
+        episodeTitle: item.episodeTitle,
+        episodeDescription: item.episodeDescription,
+        episodeThumbnail: item.episodeThumbnail || thumbnail,
         type: 'sub',
       },
     });

@@ -13,11 +13,20 @@ import {
 import { fetchAnimeStreamingLink } from '~/services/AnimeService';
 import { AnikotoStreamResponse, SubtitleTrack } from '~/types';
 
+export type VideoSourceMetadata = {
+  title?: string;
+  subtitle?: string;
+  description?: string;
+  imageUri?: string;
+  artist?: string;
+};
+
 export const useVideoPlayer = (
   animeId: string,
   episodeId: string,
   type: 'sub' | 'dub',
-  animeSlug?: string
+  animeSlug?: string,
+  metadata?: VideoSourceMetadata
 ) => {
   const videoRef = useRef<any>(null);
   // Older history entries may contain the episode number here because the
@@ -237,8 +246,25 @@ export const useVideoPlayer = (
     () => ({
       uri: videoSource ?? undefined,
       headers: referer ? { Referer: referer } : undefined,
+      metadata: metadata
+        ? {
+            title: metadata.title,
+            subtitle: metadata.subtitle,
+            artist: metadata.artist ?? metadata.subtitle,
+            description: metadata.description,
+            imageUri: metadata.imageUri,
+          }
+        : undefined,
     }),
-    [referer, videoSource]
+    [
+      referer,
+      videoSource,
+      metadata?.title,
+      metadata?.subtitle,
+      metadata?.artist,
+      metadata?.description,
+      metadata?.imageUri,
+    ]
   );
 
   const selectedVideoTrack = useMemo(

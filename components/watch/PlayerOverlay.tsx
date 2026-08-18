@@ -2,6 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { View, Text, ActivityIndicator, Animated, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TextTicker from 'react-native-text-ticker';
 
 import ScalePressable from '../shared/ScalePressable';
@@ -27,6 +28,7 @@ type PlayerOverlayProps = {
   onSeekForward: () => void;
   onShowSettings: () => void;
   onEnterPiP: () => void;
+  onBack?: () => void;
 };
 
 const PlayerOverlay = ({
@@ -40,6 +42,7 @@ const PlayerOverlay = ({
   onSeekForward,
   onShowSettings,
   onEnterPiP,
+  onBack,
 }: PlayerOverlayProps) => {
   // Zustand selectors
   const showControls = usePlayerStore((s) => s.showControls);
@@ -56,6 +59,7 @@ const PlayerOverlay = ({
   const flash = usePlayerStore((s) => s.flash);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
   const isPiP = usePlayerStore((s) => s.isPiP);
+  const insets = useSafeAreaInsets();
 
   // Actions
   const togglePlaying = usePlayerStore((s) => s.togglePlaying);
@@ -172,38 +176,54 @@ const PlayerOverlay = ({
           pointerEvents={showControls ? 'box-none' : 'none'}
           className="absolute inset-0"
           style={{ opacity: controlsAnim }}>
-          {/* Top gradient */}
+          {/* Top gradient scrim */}
           <LinearGradient
             pointerEvents="none"
-            colors={['rgba(0,0,0,0.75)', 'rgba(0,0,0,0)']}
+            colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0)']}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
-              height: isFullscreen ? 120 : 90,
+              height: isFullscreen ? 130 : 90,
             }}
           />
 
-          {/* Top bar: title + action buttons */}
-          <View className="absolute left-0 right-0 top-0 flex-row items-start justify-between px-4 pb-6 pt-4">
-            <View className="flex-1 pr-3">
-              <Text
-                style={{ color: COLORS.text, fontSize: episodeTitleFontSize, fontWeight: '700' }}>
-                Episode {episodeId}
-              </Text>
-              <View className="mt-1">
-                <TextTicker
-                  style={{ color: COLORS.textMuted, fontSize: 13, fontWeight: '500' }}
-                  duration={10000}
-                  loop
-                  bounce
-                  repeatSpacer={50}
-                  marqueeDelay={1000}>
-                  {animeTitle}
-                </TextTicker>
+          {/* Top bar: Back Button + Title + Action buttons */}
+          <View
+            className="absolute left-0 right-0 top-0 flex-row items-start justify-between px-3 pb-4"
+            style={{
+              paddingTop: isFullscreen ? 16 : 10,
+            }}>
+            <View className="flex-1 flex-row items-center pr-3" style={{ gap: 10 }}>
+              {onBack && (
+                <TopButton
+                  size={topBtnSize}
+                  iconSize={topIconSize}
+                  icon="arrow-back"
+                  onPress={onBack}
+                />
+              )}
+              <View className="min-w-0 flex-1">
+                <Text
+                  numberOfLines={1}
+                  style={{ color: COLORS.text, fontSize: episodeTitleFontSize, fontWeight: '700' }}>
+                  Episode {episodeId}
+                </Text>
+                <View className="mt-0.5">
+                  <TextTicker
+                    style={{ color: COLORS.textMuted, fontSize: 12, fontWeight: '500' }}
+                    duration={10000}
+                    loop
+                    bounce
+                    repeatSpacer={50}
+                    marqueeDelay={1000}>
+                    {animeTitle}
+                  </TextTicker>
+                </View>
               </View>
             </View>
+
             <View className="flex-row items-center" style={{ gap: 8 }}>
               <TopButton
                 size={topBtnSize}

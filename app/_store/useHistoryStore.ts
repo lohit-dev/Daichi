@@ -9,6 +9,8 @@ export type HistoryItem = {
   animeImage: string;
   episodeId: string;
   episodeNumber: string;
+  episodeTitle?: string;
+  episodeDescription?: string;
   episodeThumbnail?: string;
   progress: number;
   duration: number;
