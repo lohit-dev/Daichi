@@ -146,7 +146,7 @@ export const EpisodeCard = ({
   );
 };
 
-export default EpisodeCard;
+export default React.memo(EpisodeCard);
 
 const styles = StyleSheet.create({
   card: {

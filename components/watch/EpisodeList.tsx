@@ -54,6 +54,19 @@ const EpisodeList = ({
     }
   }, [episodes, jumpValue]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: Episode }) => (
+      <EpisodeCard
+        item={item}
+        isCurrent={item.id === currentEpisodeId}
+        fallbackImage={fallbackImage}
+        onPress={onSelectEpisode}
+        style={styles.cardItem}
+      />
+    ),
+    [currentEpisodeId, fallbackImage, onSelectEpisode]
+  );
+
   return (
     <View style={{ flex: 1 }}>
       {/* Header — "Episodes (N)" + jump field */}
@@ -98,19 +111,11 @@ const EpisodeList = ({
           );
         }}
         contentContainerStyle={{ paddingBottom: bottomPadding, paddingTop: 4 }}
-        initialNumToRender={14}
-        maxToRenderPerBatch={14}
-        windowSize={9}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
         removeClippedSubviews
-        renderItem={({ item }) => (
-          <EpisodeCard
-            item={item}
-            isCurrent={item.id === currentEpisodeId}
-            fallbackImage={fallbackImage}
-            onPress={() => onSelectEpisode(item)}
-            style={styles.cardItem}
-          />
-        )}
+        renderItem={renderItem}
       />
     </View>
   );
