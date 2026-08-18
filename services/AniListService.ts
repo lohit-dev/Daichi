@@ -948,6 +948,8 @@ export type AniListEpisodeImage = {
   number: number;
   title: string;
   thumbnail: string;
+  description?: string;
+  airDate?: string;
 };
 
 export const resolveKitsuAnimeIdFromMal = async (
@@ -1079,8 +1081,14 @@ export const fetchKitsuEpisodeImagePage = async (
       .map(mapKitsuEpisodeMetadata)
       .filter((episode): episode is KitsuEpisodeMetadata => Boolean(episode?.thumbnail))
       .map(
-        ({ number, title, thumbnail }) =>
-          ({ number, title, thumbnail: thumbnail! }) satisfies AniListEpisodeImage
+        (ep) =>
+          ({
+            number: ep.number,
+            title: ep.title,
+            thumbnail: ep.thumbnail!,
+            description: ep.description || ep.synopsis,
+            airDate: ep.airDate,
+          }) satisfies AniListEpisodeImage
       );
 
     const totalCount = payload.meta?.count ?? 0;

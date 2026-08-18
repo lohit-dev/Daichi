@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, FlatList, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -9,6 +8,8 @@ export type Episode = {
   id: string;
   number: string;
   title: string;
+  description?: string;
+  airDate?: string;
   image?: string;
   animeSlug?: string;
 };
@@ -21,9 +22,19 @@ type EpisodeListProps = {
   bottomPadding?: number;
 };
 
-// row height used for getItemLayout so scrollToIndex works even before the
-// list has rendered that far (matters once you're at One Piece / Conan scale)
-const ROW_HEIGHT = 80;
+// Row height for getItemLayout (card 88 + marginBottom 8)
+const ROW_HEIGHT = 96;
+
+const formatAirDate = (dateStr?: string) => {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Pulsing "Now Playing" dot
@@ -80,6 +91,95 @@ const PulsingDot = () => {
 };
 
 // ---------------------------------------------------------------------------
+// Individual Episode Card (with dynamic description line balancing)
+// ---------------------------------------------------------------------------
+type EpisodeCardItemProps = {
+  item: Episode;
+  isCurrent: boolean;
+  fallbackImage?: string;
+  onSelectEpisode: (episode: Episode) => void;
+};
+
+const EpisodeCardItem = ({
+  item,
+  isCurrent,
+  fallbackImage,
+  onSelectEpisode,
+}: EpisodeCardItemProps) => {
+  const thumb = item.image ?? fallbackImage;
+  const formattedDate = formatAirDate(item.airDate);
+  // Default to 1 line of description if title is longer than 28 chars, else 2 lines
+  const [descLines, setDescLines] = useState(item.title && item.title.length > 28 ? 1 : 2);
+
+  return (
+    <ScalePressable
+      onPress={() => {
+        if (!isCurrent) onSelectEpisode(item);
+      }}
+      disabled={isCurrent}
+      scaleTo={0.985}
+      style={[styles.card, isCurrent && styles.activeCard]}>
+      {/* Left: Thumbnail with EP badge */}
+      <View style={styles.thumbWrap}>
+        {thumb ? (
+          <Image source={{ uri: thumb }} style={styles.thumb} />
+        ) : (
+          <View style={styles.placeholderThumb}>
+            <Text style={styles.placeholderText}>{item.number}</Text>
+          </View>
+        )}
+        <View style={styles.epBadge}>
+          <Text style={styles.epBadgeText}>EP {item.number}</Text>
+        </View>
+      </View>
+
+      {/* Right: Content details */}
+      <View style={styles.contentWrap}>
+        <View style={styles.textContainer}>
+          {/* Episode Title — allowed up to 2 lines */}
+          <Text
+            numberOfLines={2}
+            ellipsizeMode="tail"
+            onTextLayout={(e) => {
+              const lines = e.nativeEvent.lines.length;
+              setDescLines(lines >= 2 ? 1 : 2);
+            }}
+            style={[styles.title, isCurrent && styles.activeTitle]}>
+            {item.title}
+          </Text>
+
+          {!isCurrent && (
+            /* If title takes 2 lines, description reduces to 1 line to prevent overflow */
+            <Text numberOfLines={descLines} ellipsizeMode="tail" style={styles.description}>
+              {item.description || `Episode ${item.number}`}
+            </Text>
+          )}
+        </View>
+
+        {/* Bottom metadata row */}
+        <View style={styles.footerRow}>
+          <View style={styles.footerLeft}>
+            <View style={[styles.ccBadge, isCurrent && styles.activeCcBadge]}>
+              <Text style={[styles.ccText, isCurrent && styles.activeCcText]}>CC</Text>
+            </View>
+
+            {isCurrent && (
+              /* Active card: Now playing beside the CC badge */
+              <View style={styles.nowPlayingRow}>
+                <PulsingDot />
+                <Text style={styles.nowPlayingText}>Now playing</Text>
+              </View>
+            )}
+          </View>
+
+          {formattedDate ? <Text style={styles.dateText}>{formattedDate}</Text> : null}
+        </View>
+      </View>
+    </ScalePressable>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 const EpisodeList = ({
@@ -93,7 +193,7 @@ const EpisodeList = ({
   const [jumpValue, setJumpValue] = useState('');
   const activeIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId);
 
-  // Scroll to the currently playing episode whenever the episode or list changes
+  // Scroll to the currently playing episode whenever active episode changes
   useEffect(() => {
     if (activeIndex < 0 || episodes.length === 0) return;
     const timer = setTimeout(() => {
@@ -117,7 +217,7 @@ const EpisodeList = ({
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Header — "Episodes (N)" + jump field on same row */}
+      {/* Header — "Episodes (N)" + jump field */}
       <View style={styles.listHeader}>
         <Text style={styles.sectionTitle}>
           Episodes <Text style={styles.sectionCount}>({episodes.length})</Text>
@@ -153,7 +253,6 @@ const EpisodeList = ({
           index,
         })}
         onScrollToIndexFailed={({ index }) => {
-          // Retry after a short delay if the list hasn't rendered that far yet
           setTimeout(
             () => listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 }),
             350
@@ -164,61 +263,14 @@ const EpisodeList = ({
         maxToRenderPerBatch={14}
         windowSize={9}
         removeClippedSubviews
-        renderItem={({ item }) => {
-          const isCurrent = item.id === currentEpisodeId;
-          const thumb = item.image ?? fallbackImage;
-
-          return (
-            <ScalePressable
-              onPress={() => {
-                if (!isCurrent) onSelectEpisode(item);
-              }}
-              disabled={isCurrent}
-              scaleTo={0.985}
-              style={[styles.row, isCurrent && styles.currentRow]}>
-              {/* Left accent bar for currently playing */}
-              {isCurrent && <View style={styles.accentBar} />}
-
-              {/* Thumbnail */}
-              <View style={[styles.imageWrap, isCurrent && styles.imageWrapActive]}>
-                {thumb ? (
-                  <Image source={{ uri: thumb }} style={styles.image} />
-                ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Text style={styles.imagePlaceholderText}>{item.number}</Text>
-                  </View>
-                )}
-                <View style={styles.epBadge}>
-                  <Text style={styles.epBadgeText}>EP {item.number}</Text>
-                </View>
-              </View>
-
-              {/* Text info */}
-              <View style={styles.copy}>
-                <Text numberOfLines={2} style={[styles.title, isCurrent && styles.titleActive]}>
-                  {item.title}
-                </Text>
-                {isCurrent ? (
-                  <View style={styles.playingRow}>
-                    <PulsingDot />
-                    <Text style={styles.playingText}>Now playing</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.epNumberLabel}>Episode {item.number}</Text>
-                )}
-              </View>
-
-              {/* Right control */}
-              <View style={[styles.playControl, isCurrent && styles.playControlActive]}>
-                <Ionicons
-                  name={isCurrent ? 'volume-high' : 'play'}
-                  size={isCurrent ? 16 : 17}
-                  color={isCurrent ? COLORS.accent : COLORS.bg}
-                />
-              </View>
-            </ScalePressable>
-          );
-        }}
+        renderItem={({ item }) => (
+          <EpisodeCardItem
+            item={item}
+            isCurrent={item.id === currentEpisodeId}
+            fallbackImage={fallbackImage}
+            onSelectEpisode={onSelectEpisode}
+          />
+        )}
       />
     </View>
   );
@@ -272,120 +324,139 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ── Episode row ──────────────────────────────────────────────────────────
-  row: {
+  // ── Episode Card ─────────────────────────────────────────────────────────
+  card: {
     height: ROW_HEIGHT - 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
     marginHorizontal: 14,
-    marginBottom: 6,
+    marginBottom: 8,
     borderRadius: 14,
-    backgroundColor: '#111410',
+    backgroundColor: '#111511',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.07)',
-    paddingRight: 10,
-    paddingLeft: 8,
-    paddingVertical: 8,
     overflow: 'hidden',
   },
-  currentRow: {
-    backgroundColor: '#141a0f',
+  activeCard: {
+    backgroundColor: '#152012',
     borderColor: COLORS.accent,
     borderWidth: 1,
   },
 
-  // Left accent bar (only on current row)
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: COLORS.accent,
-  },
-
   // Thumbnail
-  imageWrap: {
-    width: 80,
-    height: 52,
-    borderRadius: 9,
-    overflow: 'hidden',
+  thumbWrap: {
+    width: 116,
+    height: '100%',
     backgroundColor: '#090b09',
+    position: 'relative',
   },
-  imageWrapActive: {
-    borderWidth: 1,
-    borderColor: `${COLORS.accent}55`,
+  thumb: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
-  image: { width: '100%', height: '100%' },
-  imagePlaceholder: {
+  placeholderThumb: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1a1f17',
   },
-  imagePlaceholderText: {
+  placeholderText: {
     color: COLORS.textFaint,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
   },
   epBadge: {
     position: 'absolute',
-    left: 5,
-    bottom: 5,
+    left: 6,
+    bottom: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: 'rgba(4,6,4,0.85)',
+    backgroundColor: 'rgba(0,0,0,0.82)',
   },
   epBadgeText: {
-    color: COLORS.accent,
+    color: '#FFFFFF',
     fontSize: 9,
     fontWeight: '900',
     letterSpacing: 0.4,
   },
 
-  // Text
-  copy: { flex: 1, minWidth: 0, gap: 3 },
+  // Content
+  contentWrap: {
+    flex: 1,
+    height: '100%',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    justifyContent: 'space-between',
+  },
+  textContainer: {
+    gap: 2,
+  },
   title: {
-    color: COLORS.text,
-    fontFamily: 'Salsa-Regular',
+    color: '#FFFFFF',
     fontSize: 13,
+    fontWeight: '700',
     lineHeight: 17,
   },
-  titleActive: {
+  activeTitle: {
     color: '#FFFFFF',
+    fontWeight: '800',
   },
-  epNumberLabel: {
-    color: COLORS.textFaint,
-    fontSize: 10,
-    fontWeight: '600',
+  description: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '400',
   },
-  playingRow: {
+  nowPlayingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
-  playingText: {
+  nowPlayingText: {
     color: COLORS.accent,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.3,
   },
 
-  // Play button
-  playControl: {
-    width: 34,
-    height: 34,
+  // Bottom footer row
+  footerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 17,
-    backgroundColor: COLORS.accent,
+    justifyContent: 'space-between',
+    marginTop: 'auto',
   },
-  playControlActive: {
-    backgroundColor: 'rgba(163,230,53,0.12)',
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ccBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
     borderWidth: 1,
-    borderColor: COLORS.accent,
+    borderColor: 'rgba(255,255,255,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  activeCcBadge: {
+    borderColor: `${COLORS.accent}66`,
+    backgroundColor: `${COLORS.accent}15`,
+  },
+  ccText: {
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  activeCcText: {
+    color: COLORS.accent,
+  },
+  dateText: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 10,
+    fontWeight: '500',
   },
 });
