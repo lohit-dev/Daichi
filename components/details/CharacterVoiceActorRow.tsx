@@ -17,27 +17,21 @@ type CharacterVoiceActorRowProps = {
   animeId?: string;
   className?: string;
   seeAll?: boolean;
-  rounded?: boolean;
 };
 
-type RoundedRowItemProps = {
-  item: CharacterVoiceActor;
-};
+type RoundedRowItemProps = { item: CharacterVoiceActor };
 
 const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
   const router = useRouter();
 
-  // item.image is the character image — skip if missing
-  if (!item?.image) {
-    return null;
-  }
+  if (!item?.image) return null;
 
   return (
-    <View className="flex items-center justify-center">
+    <View className="items-center justify-center">
       {/* Character */}
       <Animated.View
         entering={FadeInRight.duration(500)}
-        className="flex items-center justify-center pr-2 pt-2">
+        className="items-center justify-center pr-2 pt-2">
         <ScalePressable
           scaleTo={0.92}
           onPress={() =>
@@ -49,7 +43,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
           <View className="overflow-hidden rounded-full">
             <AnimatedImageBackground
               source={{ uri: item.image }}
-              className="flex items-center justify-center"
+              className="items-center justify-center"
               style={styles.roundedImage}
               sharedTransitionTag={`cast-character-${item.id}`}
             />
@@ -63,14 +57,13 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
         </ScalePressable>
       </Animated.View>
 
-      {/* Connector */}
       {item.voiceActor ? <ArrowSwapVertical size="28" color="#a3e635" /> : null}
 
       {/* Voice Actor */}
       {item.voiceActor ? (
         <Animated.View
           entering={FadeInRight.duration(500)}
-          className="flex items-center justify-center pr-2 pt-2">
+          className="items-center justify-center pr-2 pt-2">
           <ScalePressable
             scaleTo={0.92}
             onPress={() =>
@@ -82,7 +75,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
             <View className="overflow-hidden rounded-full">
               <AnimatedImageBackground
                 source={{ uri: item.voiceActor.image }}
-                className="flex items-center justify-center"
+                className="items-center justify-center"
                 style={styles.roundedImage}
                 sharedTransitionTag={`cast-staff-${item.voiceActor.id}`}
               />
@@ -108,22 +101,18 @@ export const CharacterVoiceActorRow = ({
 }: CharacterVoiceActorRowProps) => {
   const router = useRouter();
 
-  if (!Array.isArray(data) || data.length === 0) {
-    return null;
-  }
+  if (!Array.isArray(data) || data.length === 0) return null;
 
   return (
     <View className={className}>
-      <View className="flex flex-row items-center justify-between pb-2 pt-8">
+      <View className="flex-row items-center justify-between pb-2 pt-8">
         <Text className="font-salsa text-3xl font-semibold text-white">
           {getFormattedTitle('Characters & Voice Actors')}
         </Text>
         {seeAll && (
           <ScalePressable
             onPress={() => {
-              if (animeId) {
-                router.push({ pathname: '/anime/cast/[id]', params: { id: animeId } });
-              }
+              if (animeId) router.push({ pathname: '/anime/cast/[id]', params: { id: animeId } });
             }}
             haptic="none">
             <Text className="font-salsa text-base text-lime-300">View all</Text>
@@ -149,8 +138,5 @@ export const CharacterVoiceActorRow = ({
 export default CharacterVoiceActorRow;
 
 const styles = StyleSheet.create({
-  roundedImage: {
-    width: wp(20),
-    height: wp(20),
-  },
+  roundedImage: { width: wp(20), height: wp(20) },
 });

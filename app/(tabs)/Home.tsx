@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import LottieView from 'lottie-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   NativeScrollEvent,
@@ -25,7 +24,8 @@ import Gradient from '~/components/home/Gradient';
 import HomeBanner from '~/components/home/HomeBanner';
 import HomeButtons from '~/components/home/HomeButtons';
 import RowItem from '~/components/home/RowItem';
-import { hp, wp } from '~/helpers/common';
+import ErrorScreen from '~/components/shared/ErrorScreen';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import { fetchAniListHomePage } from '~/services/AniListService';
 import { Anime } from '~/types';
 
@@ -146,31 +146,9 @@ const Home = () => {
     };
   }, [activeIndex, bannerRef, isAutoPlay, spotlightAnime.length, width]);
 
-  if (isLoading) {
-    return (
-      <View className="flex flex-1 items-center justify-center bg-neutral-950">
-        <LottieView
-          source={require('~/assets/lottie/loading.json')}
-          autoPlay
-          loop
-          style={{ height: hp(40), width: wp(45) }}
-        />
-      </View>
-    );
-  }
+  if (isLoading) return <LoadingScreen />;
 
-  if (error) {
-    return (
-      <View className="flex flex-1 items-center justify-center bg-neutral-950">
-        <LottieView
-          source={require('~/assets/lottie/Error.json')}
-          autoPlay
-          loop
-          style={{ height: hp(40), width: wp(70) }}
-        />
-      </View>
-    );
-  }
+  if (error) return <ErrorScreen />;
 
   return (
     <SafeAreaView edges={['left', 'right']} className="flex-1 bg-neutral-950">

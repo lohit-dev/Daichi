@@ -29,26 +29,21 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
       [-100, 0, 100],
       Extrapolation.CLAMP
     );
-
     const opacityAnim = interpolate(
       x.value,
       [(index - 1) * width, index * width, (index + 1) * width],
       [-5, 1, -5],
       Extrapolation.CLAMP
     );
-
-    return {
-      opacity: opacityAnim,
-      transform: [{ translateY: translateYAnim }],
-    };
+    return { opacity: opacityAnim, transform: [{ translateY: translateYAnim }] };
   });
 
   return (
     <Pressable onPress={onPress}>
       <Animated.View style={[styles.container, animatedStyle]}>
         <View
-          className="absolute bottom-2 left-0 right-0 px-3 text-center text-white"
-          style={[styles.title, { height: titleHeight }]}>
+          className="absolute bottom-2 left-0 right-0 px-3 text-center"
+          style={[styles.titleBlock, { height: titleHeight }]}>
           <Text
             className="px-2 pt-3 text-center font-salsa text-3xl font-semibold text-white"
             numberOfLines={2}
@@ -77,12 +72,6 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
 export default AnimeBannerText;
 
 const styles = StyleSheet.create({
-  container: {
-    width: wp(100),
-    height: hp(50),
-  },
-  title: {
-    height: 100,
-    fontFamily: 'Salsa-Regular',
-  },
+  container: { width: wp(100), height: hp(50) },
+  titleBlock: { fontFamily: 'Salsa-Regular' },
 });

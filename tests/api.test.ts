@@ -14,6 +14,8 @@ import {
   fetchAniListCastPerson,
   fetchAniListSubbed,
   fetchAniListDubbed,
+  fetchAniListSubbedPage,
+  fetchAniListDubbedPage,
   fetchAniListBrowse,
   fetchAniListStreamingEpisodeImages,
   fetchAniListEpisodeDiscussion,
@@ -195,6 +197,44 @@ test('16. Anikoto — episode list for Detective Conan', async () => {
 // ---------------------------------------------------------------------------
 // Main flow: home → search Conan → details → extras → episodes → stream ep 1
 // ---------------------------------------------------------------------------
+
+test('17. fetchAniListSubbedPage — page 1 returns paginated results', async () => {
+  const result = await fetchAniListSubbedPage(1, 12);
+  expect(result.results.length).toBeGreaterThan(0);
+  expect(result.pagination.currentPage).toBe(1);
+  expect(typeof result.pagination.hasNextPage).toBe('boolean');
+  for (const anime of result.results.slice(0, 3)) {
+    expect(typeof anime.title).toBe('string');
+    expect(typeof anime.slug).toBe('string');
+    expect(typeof anime.image).toBe('string');
+    expect(Array.isArray(anime.genres)).toBe(true);
+  }
+  await wait();
+});
+
+test('18. fetchAniListDubbedPage — page 1 returns paginated results', async () => {
+  const result = await fetchAniListDubbedPage(1, 12);
+  expect(result.results.length).toBeGreaterThan(0);
+  expect(result.pagination.currentPage).toBe(1);
+  expect(typeof result.pagination.hasNextPage).toBe('boolean');
+  for (const anime of result.results.slice(0, 3)) {
+    expect(typeof anime.title).toBe('string');
+    expect(typeof anime.slug).toBe('string');
+    expect(typeof anime.image).toBe('string');
+    expect(Array.isArray(anime.genres)).toBe(true);
+  }
+  await wait();
+});
+
+test('19. fetchAniListSubbedPage — page 2 has different results than page 1', async () => {
+  const page1 = await fetchAniListSubbedPage(1, 12);
+  await wait();
+  const page2 = await fetchAniListSubbedPage(2, 12);
+  expect(page2.pagination.currentPage).toBe(2);
+  const page1Slugs = new Set(page1.results.map((a) => a.slug));
+  expect(page2.results.some((a) => !page1Slugs.has(a.slug))).toBe(true);
+  await wait();
+});
 
 test('full flow: home → search → details → cast → episodes → stream', async () => {
   // Home

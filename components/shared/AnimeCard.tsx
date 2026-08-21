@@ -8,11 +8,9 @@ import ScalePressable from './ScalePressable';
 
 import { hp, wp } from '~/helpers/common';
 import { Anime } from '~/types';
+
 const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
-// Cap the stagger delay so long lists don't take forever to appear.
-// Only the first few visible items get a noticeable cascade; after that
-// the delay plateaus and everything fades in almost together.
 const MAX_STAGGER_ITEMS = 6;
 const STAGGER_DELAY_MS = 80;
 
@@ -49,12 +47,12 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
           <View className="overflow-hidden rounded-2xl">
             <AnimatedImageBackground
               source={{ uri: item.image }}
-              style={[styles.Image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}>
+              style={[styles.image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}>
               {detailsEnabled && (
                 <View className="flex-1 items-end justify-start p-2">
-                  <View className="flex-row items-center justify-center space-x-1 rounded-full bg-lime-200 px-2 py-[2]">
+                  <View className="flex-row items-center justify-center rounded-full bg-lime-200 px-2 py-[2px]">
                     {item.rating ? (
-                      <View className="flex flex-row items-center justify-center gap-1">
+                      <View className="flex-row items-center gap-1">
                         <Star1 variant="Bold" size={12} color="#000" />
                         <Text className="font-salsa text-black">{item.rating}</Text>
                       </View>
@@ -77,10 +75,7 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
 export default AnimeCard;
 
 const styles = StyleSheet.create({
-  Image: {
-    width: wp(28),
-    height: hp(19),
-  },
+  image: { width: wp(28), height: hp(19) },
 });
 
 const IMAGE_ASPECT_RATIO = hp(19) / wp(28);

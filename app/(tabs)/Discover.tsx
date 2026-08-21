@@ -1,13 +1,15 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import LottieView from 'lottie-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import RowItem from '~/components/home/RowItem';
 import SearchInput from '~/components/search/SearchInput';
-import AnimeCard from '~/components/shared/AnimeCard';
+import AnimeGrid from '~/components/shared/AnimeGrid';
+import ErrorScreen from '~/components/shared/ErrorScreen';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import { wp } from '~/helpers/common';
 import { useDebounce } from '~/hooks/useDebounce';
 import {
@@ -90,12 +92,7 @@ const Discover = () => {
 
           {isCatalogueLoading && (
             <View className="items-center py-12">
-              <LottieView
-                source={require('~/assets/lottie/loading.json')}
-                autoPlay
-                loop
-                style={{ height: wp(28), width: wp(28) }}
-              />
+              <LoadingScreen />
             </View>
           )}
           {subbedAnime.length > 0 && (
@@ -119,59 +116,19 @@ const Discover = () => {
         </ScrollView>
       )}
 
-      {/* Loading, Error, and Search Results */}
-      {hasSearchQuery && isSearchLoading && (
-        <View className="flex-1 items-center justify-center bg-neutral-950 pb-24">
-          <LottieView
-            source={require('~/assets/lottie/loading.json')}
-            autoPlay
-            loop
-            style={{
-              height: wp(30),
-              width: wp(30),
-            }}
-          />
-        </View>
-      )}
-      {hasSearchQuery && !isSearchLoading && searchError && (
-        <View className="flex-1 items-center justify-center bg-neutral-950 pb-24">
-          <LottieView
-            source={require('~/assets/lottie/Error.json')}
-            autoPlay
-            loop
-            style={{
-              height: wp(60),
-              width: wp(60),
-            }}
-          />
-        </View>
-      )}
+      {hasSearchQuery && isSearchLoading && <LoadingScreen />}
 
-      {/* Search Results FlatList */}
+      {hasSearchQuery && !isSearchLoading && searchError && <ErrorScreen />}
+
+      {/* Search Results */}
       {hasSearchQuery && !isSearchLoading && searchAnimes.length > 0 && (
-        <FlatList
+        <AnimeGrid
           data={searchAnimes}
-          keyExtractor={(item, index) => item.slug || `searchItem_${index}`}
-          renderItem={({ item, index }) => <AnimeCard item={item} index={index} />}
-          numColumns={3}
-          initialNumToRender={12}
-          maxToRenderPerBatch={15}
-          windowSize={5}
-          removeClippedSubviews
-          onEndReachedThreshold={0.5}
           onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) {
-              fetchNextPage();
-            }
+            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}
-          ListFooterComponent={
-            isFetchingNextPage ? (
-              <View className="items-center py-4">
-                <Text className="text-neutral-400">Loading more...</Text>
-              </View>
-            ) : null
-          }
-          contentContainerStyle={{ paddingBottom: 110 }}
+          isFetchingNextPage={isFetchingNextPage}
+          contentPaddingBottom={110}
         />
       )}
 

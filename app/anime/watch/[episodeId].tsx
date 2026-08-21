@@ -27,7 +27,7 @@ import EpisodeList from '~/components/watch/EpisodeList';
 import PlayerOverlay from '~/components/watch/PlayerOverlay';
 import SettingsSheet from '~/components/watch/SettingsSheet';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
-import { formatIdToTitle } from '~/helpers/common';
+import { formatIdToTitle, hp } from '~/helpers/common';
 import { useEpisodeList } from '~/hooks/useEpisodeList';
 import { usePlayerControls } from '~/hooks/usePlayerControls';
 import { useVideoPlayer } from '~/hooks/useVideoPlayer';
@@ -708,6 +708,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     padding: 4,
+    bottom: hp(3),
     borderRadius: 28,
     backgroundColor: 'rgba(14,19,14,0.97)',
     borderWidth: 1,

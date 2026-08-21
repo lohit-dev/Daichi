@@ -1,12 +1,13 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, ArrowRight2 } from 'iconsax-react-native';
-import LottieView from 'lottie-react-native';
 import { useCallback } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import ErrorScreen from '~/components/shared/ErrorScreen';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { fetchAniListAnimeCastPage } from '~/services/AniListService';
@@ -17,9 +18,10 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
 
   return (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 45).duration(320)}>
-      <View style={styles.castCard}>
+      <View className="min-h-[192px] flex-row items-center rounded-[18px] border border-white/10 bg-[#111310] p-3">
+        {/* Character column */}
         <ScalePressable
-          style={styles.personColumn}
+          className="flex-1 items-center"
           scaleTo={0.96}
           onPress={() =>
             router.push({
@@ -27,26 +29,30 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
               params: { personId: item.id, kind: 'character' },
             })
           }>
-          <Text style={styles.personType}>CHARACTER</Text>
+          <Text className="mb-[7px] text-[9px] tracking-[1px] text-lime-400/70">CHARACTER</Text>
           <Animated.Image
             source={{ uri: item.image }}
             style={styles.personImage}
             sharedTransitionTag={`cast-character-${item.id}`}
           />
-          <Text style={styles.personName} numberOfLines={2}>
+          <Text
+            className="mt-2 text-center font-salsa text-[13px] font-bold text-white"
+            numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.personRole} numberOfLines={1}>
+          <Text className="mt-[3px] text-[11px] text-lime-400" numberOfLines={1}>
             {item.role}
           </Text>
         </ScalePressable>
 
-        <View style={styles.connector}>
+        {/* Connector */}
+        <View className="mx-[6px] h-7 w-7 items-center justify-center rounded-full bg-lime-400/10">
           <ArrowRight2 size={17} color="#a3e635" />
         </View>
 
+        {/* Voice actor column */}
         <ScalePressable
-          style={styles.personColumn}
+          className="flex-1 items-center"
           scaleTo={0.96}
           disabled={!item.voiceActor}
           onPress={() =>
@@ -56,7 +62,7 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
               params: { personId: item.voiceActor.id, kind: 'staff' },
             })
           }>
-          <Text style={styles.personType}>VOICE ACTOR</Text>
+          <Text className="mb-[7px] text-[9px] tracking-[1px] text-lime-400/70">VOICE ACTOR</Text>
           {item.voiceActor?.image ? (
             <Animated.Image
               source={{ uri: item.voiceActor.image }}
@@ -66,10 +72,12 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
           ) : (
             <View style={[styles.personImage, styles.imagePlaceholder]} />
           )}
-          <Text style={styles.personName} numberOfLines={2}>
+          <Text
+            className="mt-2 text-center font-salsa text-[13px] font-bold text-white"
+            numberOfLines={2}>
             {item.voiceActor?.name || 'Voice actor unavailable'}
           </Text>
-          <Text style={styles.personRole} numberOfLines={1}>
+          <Text className="mt-[3px] text-[11px] text-lime-400" numberOfLines={1}>
             {item.voiceActor?.language || 'Voice Actor'}
           </Text>
         </ScalePressable>
@@ -81,6 +89,7 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
 export default function CastScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const { data, error, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ['anilist', 'anime-cast', id],
@@ -98,61 +107,39 @@ export default function CastScreen() {
     []
   );
 
-  if (isLoading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#a3e635" />
-        <Text style={styles.mutedText}>Loading cast…</Text>
-      </View>
-    );
-  }
+  if (isLoading) return <LoadingScreen />;
 
   if (error) {
-    return (
-      <View style={styles.centered}>
-        <ScalePressable
-          onPress={() => router.back()}
-          style={styles.errorBackButton}
-          scaleTo={0.86}
-          accessibilityLabel="Go back">
-          <ArrowLeft2 size={20} color="#fff" />
-        </ScalePressable>
-        <LottieView
-          source={require('~/assets/lottie/Error.json')}
-          autoPlay
-          loop
-          style={styles.errorAnimation}
-        />
-        <Text style={styles.errorText}>Unable to load the cast.</Text>
-        <ScalePressable onPress={() => refetch()} style={styles.retryButton} haptic="medium">
-          <Text style={styles.retryText}>Try again</Text>
-        </ScalePressable>
-      </View>
-    );
+    return <ErrorScreen message="Unable to load the cast." onRetry={() => refetch()} />;
   }
 
   const cast = data?.pages.flatMap((page) => page.cast) ?? [];
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-      <View style={styles.header}>
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-[#0a0a0a]">
+      {/* Header */}
+      <View className="flex-row items-center border-b border-white/10 px-4 py-3">
         <ScalePressable
           onPress={() => router.back()}
-          style={styles.backButton}
+          className="h-10 w-10 items-center justify-center rounded-full bg-white/[0.07]"
           scaleTo={0.86}
           accessibilityLabel="Go back">
           <ArrowLeft2 size={22} color="#fff" />
         </ScalePressable>
-        <View style={styles.headerCopy}>
+        <View className="mx-[10px] flex-1 items-center">
           <Text style={styles.title}>{getFormattedTitle('Cast')}</Text>
-          <Text style={styles.subtitle}>{cast.length} character connections</Text>
+          <Text className="mt-[2px] text-xs text-white/45">
+            {cast.length} character connections
+          </Text>
         </View>
-        <View style={styles.headerSpacer} />
+        <View className="w-10" />
       </View>
 
       {cast.length === 0 ? (
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No cast information is available yet.</Text>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text className="text-center text-base text-white/55">
+            No cast information is available yet.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -180,98 +167,9 @@ export default function CastScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0a0a0a' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  headerCopy: { flex: 1, alignItems: 'center', marginHorizontal: 10 },
-  headerSpacer: { width: 40 },
-  title: { color: '#fff', fontFamily: 'Salsa-Regular', fontSize: 25, fontWeight: '700' },
-  subtitle: { color: 'rgba(255,255,255,0.45)', fontSize: 12, marginTop: 2 },
-  listContent: { padding: 14, paddingBottom: 110, gap: 14 },
-  footerLoader: { paddingVertical: 18 },
-  castCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#111310',
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-    padding: 12,
-    minHeight: 192,
-  },
-  personColumn: { flex: 1, alignItems: 'center' },
-  personType: {
-    color: 'rgba(163,230,53,0.7)',
-    fontSize: 9,
-    letterSpacing: 1,
-    marginBottom: 7,
-  },
   personImage: { width: 78, height: 78, borderRadius: 39, backgroundColor: '#1b1e18' },
   imagePlaceholder: { borderWidth: 1, borderColor: 'rgba(163,230,53,0.18)' },
-  personName: {
-    color: '#fff',
-    fontFamily: 'Salsa-Regular',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  personRole: { color: '#a3e635', fontSize: 11, marginTop: 3 },
-  connector: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(163,230,53,0.12)',
-    marginHorizontal: 6,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a0a0a',
-    padding: 24,
-  },
-  mutedText: { color: 'rgba(255,255,255,0.55)', marginTop: 12 },
-  emptyText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  errorAnimation: { width: 180, height: 180 },
-  errorBackButton: {
-    position: 'absolute',
-    top: 18,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  errorText: { color: '#fff', fontSize: 17, marginTop: 8 },
-  retryButton: {
-    backgroundColor: '#bef264',
-    borderRadius: 12,
-    paddingHorizontal: 22,
-    paddingVertical: 11,
-    marginTop: 18,
-  },
-  retryText: { color: '#182008', fontWeight: '700' },
+  listContent: { padding: 14, paddingBottom: 110, gap: 14 },
+  footerLoader: { paddingVertical: 18 },
+  title: { color: '#fff', fontFamily: 'Salsa-Regular', fontSize: 25, fontWeight: '700' },
 });

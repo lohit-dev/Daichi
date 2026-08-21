@@ -15,9 +15,7 @@ type RowItemProps = {
   seeAll: boolean;
   data: Anime[] | undefined;
   category?: BrowseCategory;
-  /** When provided, "View all" navigates to the static list screen with this data */
   staticData?: Anime[];
-  /** Lets the list screen refetch large catalogues instead of serializing them into a URL. */
   staticQuery?: 'subbed' | 'dubbed';
   className?: string;
   rounded?: boolean;
@@ -35,31 +33,29 @@ const RowItem = ({
   rounded = false,
   testIdPrefix,
 }: RowItemProps) => {
-  const roundedRenderItem = ({ item, index }: { item: Anime; index: number }) => {
-    return (
-      <Animated.View entering={FadeInRight.delay(index * 200).duration(500)}>
-        <ScalePressable
-          onPress={() => {
-            router.push({ pathname: '/anime/[id]', params: { id: item.slug, poster: item.image } });
-          }}
-          className="flex px-2">
-          <View className="overflow-hidden rounded-full">
-            <ImageBackground
-              source={{ uri: item.image }}
-              className="flex items-center justify-center"
-              style={styles.roundedImage}>
-              <View className="absolute bottom-0 left-0 right-0 top-0 z-auto bg-black opacity-50" />
-              <Text className="font-salsa text-5xl text-lime-400">{index + 1}</Text>
-            </ImageBackground>
-          </View>
-        </ScalePressable>
-      </Animated.View>
-    );
-  };
+  const roundedRenderItem = ({ item, index }: { item: Anime; index: number }) => (
+    <Animated.View entering={FadeInRight.delay(index * 200).duration(500)}>
+      <ScalePressable
+        onPress={() =>
+          router.push({ pathname: '/anime/[id]', params: { id: item.slug, poster: item.image } })
+        }
+        className="px-2">
+        <View className="overflow-hidden rounded-full">
+          <ImageBackground
+            source={{ uri: item.image }}
+            className="items-center justify-center"
+            style={styles.roundedImage}>
+            <View className="absolute bottom-0 left-0 right-0 top-0 bg-black opacity-50" />
+            <Text className="font-salsa text-5xl text-lime-400">{index + 1}</Text>
+          </ImageBackground>
+        </View>
+      </ScalePressable>
+    </Animated.View>
+  );
 
   return (
     <View className={className}>
-      <View className="flex flex-row items-center justify-between p-4 pt-8">
+      <View className="flex-row items-center justify-between p-4 pt-8">
         <Text className="font-salsa text-3xl font-semibold text-white">
           {getFormattedTitle(name)}
         </Text>
@@ -69,10 +65,7 @@ const RowItem = ({
               if (staticQuery) {
                 router.push({
                   pathname: '/browse/list',
-                  params: {
-                    title: encodeURIComponent(name),
-                    source: staticQuery,
-                  },
+                  params: { title: encodeURIComponent(name), source: staticQuery },
                 });
               } else if (staticData?.length) {
                 router.push({
@@ -122,12 +115,5 @@ const RowItem = ({
 export default RowItem;
 
 const styles = StyleSheet.create({
-  Image: {
-    width: wp(28),
-    height: hp(19),
-  },
-  roundedImage: {
-    width: wp(20),
-    height: wp(20),
-  },
+  roundedImage: { width: wp(20), height: wp(20) },
 });

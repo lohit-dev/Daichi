@@ -1,19 +1,15 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft2 } from 'iconsax-react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AnimeCard from '~/components/shared/AnimeCard';
+import AnimeGrid from '~/components/shared/AnimeGrid';
 import ScalePressable from '~/components/shared/ScalePressable';
-import { getFormattedTitle } from '~/helpers/TextFormat';
-import { hp, wp } from '~/helpers/common';
+import ScreenHeader from '~/components/shared/ScreenHeader';
 import { fetchAniListBrowse, BrowseCategory } from '~/services/AniListService';
 import { Anime } from '~/types';
 
-// ─── Category slug → fallback display title ────────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
   trending: 'Hot Trends',
   airing: 'Top Airing Now',
@@ -23,11 +19,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   recent: 'Latest Episodes',
 };
 
-const NUM_COLUMNS = 3;
 const PER_PAGE = 24;
 
 export default function BrowseScreen() {
-  const router = useRouter();
   const { category, title } = useLocalSearchParams<{
     category: BrowseCategory;
     title?: string;
@@ -37,7 +31,6 @@ export default function BrowseScreen() {
     ? decodeURIComponent(title as string)
     : (CATEGORY_LABELS[category as string] ?? 'Browse');
 
-  // ─── Infinite query ────────────────────────────────────────────────────────────
   const {
     data,
     fetchNextPage,
@@ -58,34 +51,15 @@ export default function BrowseScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Flatten pages into one array
   const items: Anime[] = data?.pages.flatMap((p) => p.results) ?? [];
 
   const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  const renderItem = useCallback(
-    ({ item, index }: { item: Anime; index: number }) => <AnimeCard item={item} index={index} />,
-    []
-  );
-
-  const ListFooter = useCallback(
-    () =>
-      isFetchingNextPage ? (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color="#a3e635" />
-        </View>
-      ) : null,
-    [isFetchingNextPage]
-  );
-
-  // ─── States ────────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <View style={styles.centered}>
+      <View className="flex-1 items-center justify-center bg-neutral-950">
         <ActivityIndicator size="large" color="#a3e635" />
       </View>
     );
@@ -93,133 +67,39 @@ export default function BrowseScreen() {
 
   if (isError) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>
+      <View className="flex-1 items-center justify-center gap-4 bg-neutral-950">
+        <Text className="px-6 text-center text-[15px] text-white/70">
           {error instanceof Error ? error.message : 'Something went wrong.'}
         </Text>
-        <ScalePressable onPress={() => refetch()} style={styles.retryBtn} haptic="medium">
-          <Text style={styles.retryText}>Retry</Text>
+        <ScalePressable
+          onPress={() => refetch()}
+          className="rounded-xl bg-lime-200 px-6 py-3"
+          haptic="medium">
+          <Text className="text-[15px] font-bold text-[#182008]">Retry</Text>
         </ScalePressable>
       </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-      {/* ── Header ── */}
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>
-        <ScalePressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          scaleTo={0.85}
-          accessibilityLabel="Go back">
-          <ArrowLeft2 size={22} color="#fff" />
-        </ScalePressable>
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-neutral-950">
+      <ScreenHeader title={displayTitle} />
 
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {getFormattedTitle(displayTitle)}
-        </Text>
-
-        {/* right spacer keeps title centred — transparent */}
-        <View style={styles.headerSpacer} />
-      </Animated.View>
-
-      {/* ── Infinite grid ── */}
-      <FlatList
+      <AnimeGrid
         data={items}
-        keyExtractor={(item) => item.slug}
-        numColumns={NUM_COLUMNS}
-        renderItem={renderItem}
         onEndReached={handleEndReached}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.row}
-        initialNumToRender={18}
-        maxToRenderPerBatch={12}
-        windowSize={5}
-        removeClippedSubviews
+        isFetchingNextPage={isFetchingNextPage}
       />
 
-      {/* Show a full-screen spinner when refetching an empty list */}
+      {/* Full-screen spinner while refetching an empty list — needs absoluteFill */}
       {isFetching && !isFetchingNextPage && items.length === 0 && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <ActivityIndicator size="large" color="#a3e635" style={{ marginTop: hp(40) }} />
+        <View
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+          className="items-center justify-center">
+          <ActivityIndicator size="large" color="#a3e635" />
         </View>
       )}
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#0a0a0a',
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: '#0a0a0a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  headerSpacer: {
-    width: 40,
-    height: 40,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: '#ffffff',
-    fontFamily: 'Salsa-Regular',
-    fontSize: 22,
-    marginHorizontal: 8,
-  },
-  listContent: {
-    paddingTop: 8,
-    paddingBottom: hp(10),
-    paddingHorizontal: wp(1),
-  },
-  row: {
-    justifyContent: 'flex-start',
-  },
-  footerLoader: {
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  errorText: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 15,
-    textAlign: 'center',
-    paddingHorizontal: 24,
-  },
-  retryBtn: {
-    backgroundColor: '#bef264',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  retryText: {
-    color: '#182008',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});

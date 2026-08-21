@@ -273,7 +273,7 @@ const STAFF_DETAILS_QUERY = `
       yearsActive
       siteUrl
       favourites
-      staffMedia(page: 1, perPage: 30, sort: [POPULARITY_DESC]) {
+      characterMedia(page: 1, perPage: 50, sort: [POPULARITY_DESC]) {
         edges {
           node { ${PERSON_WORK_FIELDS} }
         }
@@ -702,7 +702,8 @@ export const fetchAniListCastPerson = async (
       yearsActive?: number[] | null;
       siteUrl?: string | null;
       favourites?: number | null;
-      staffMedia?: {
+      staffMedia?: never;
+      characterMedia?: {
         edges?:
           | {
               node?: Parameters<typeof mapCastWork>[0] | null;
@@ -738,7 +739,7 @@ export const fetchAniListCastPerson = async (
     favourites: staff.favourites || undefined,
     siteUrl: staff.siteUrl || undefined,
     nonAnimeRoles: [],
-    works: (staff.staffMedia?.edges ?? [])
+    works: (staff.characterMedia?.edges ?? [])
       .filter((edge): edge is typeof edge & { node: Parameters<typeof mapCastWork>[0] } =>
         Boolean(edge.node)
       )
@@ -755,6 +756,71 @@ export const fetchAniListDubbed = async (): Promise<Anime[]> => {
   const data = await queryAniList<{ Page: Pick<RawPage, 'media'> }>(DUBBED_QUERY);
   return data.Page.media.map(mapAnime);
 };
+
+// ---------------------------------------------------------------------------
+// Paginated subbed / dubbed — same filters, variable page + perPage
+// ---------------------------------------------------------------------------
+
+const SUBBED_PAGE_QUERY = `
+  query SubbedPage($page: Int!, $perPage: Int!) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { currentPage hasNextPage }
+      media(
+        type: ANIME
+        isAdult: false
+        countryOfOrigin: JP
+        sort: [POPULARITY_DESC]
+      ) { ${MEDIA_FIELDS} }
+    }
+  }
+`;
+
+const DUBBED_PAGE_QUERY = `
+  query DubbedPage($page: Int!, $perPage: Int!) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { currentPage hasNextPage }
+      media(
+        type: ANIME
+        isAdult: false
+        countryOfOrigin: JP
+        sort: [SCORE_DESC]
+        status_in: [FINISHED, RELEASING]
+        averageScore_greater: 70
+        popularity_greater: 100000
+      ) { ${MEDIA_FIELDS} }
+    }
+  }
+`;
+
+export const fetchAniListSubbedPage = async (
+  page: number,
+  perPage = 24
+): Promise<AniListSearchResponse> => {
+  const data = await queryAniList<{ Page: RawPage }>(SUBBED_PAGE_QUERY, { page, perPage });
+  return {
+    results: data.Page.media.map(mapAnime),
+    pagination: {
+      currentPage: data.Page.pageInfo.currentPage,
+      hasNextPage: data.Page.pageInfo.hasNextPage,
+    },
+  };
+};
+
+export const fetchAniListDubbedPage = async (
+  page: number,
+  perPage = 24
+): Promise<AniListSearchResponse> => {
+  const data = await queryAniList<{ Page: RawPage }>(DUBBED_PAGE_QUERY, { page, perPage });
+  return {
+    results: data.Page.media.map(mapAnime),
+    pagination: {
+      currentPage: data.Page.pageInfo.currentPage,
+      hasNextPage: data.Page.pageInfo.hasNextPage,
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Episode images – from AniList streamingEpisodes (Crunchyroll / HiDive etc.)

@@ -9,9 +9,7 @@ import ScalePressable from '../shared/ScalePressable';
 
 import { useEpisodeList } from '~/hooks/useEpisodeList';
 
-type Episode = EpisodeItemData & {
-  episodeId: string;
-};
+type Episode = EpisodeItemData & { episodeId: string };
 
 export type EpisodePressPayload = {
   episodeId: string;
@@ -76,15 +74,13 @@ const EpisodeListSheet = ({
 
   const filteredAndSortedEpisodes = useMemo(() => {
     let result = [...episodes];
-
     if (searchQuery) {
       result = result.filter(
-        (episode) =>
-          episode.number.toString().includes(searchQuery) ||
-          episode.title?.toLowerCase().includes(searchQuery.toLowerCase())
+        (ep) =>
+          ep.number.toString().includes(searchQuery) ||
+          ep.title?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-
     result.sort((a, b) => {
       const numA = parseFloat(String(a.number)) || 0;
       const numB = parseFloat(String(b.number)) || 0;
@@ -92,10 +88,6 @@ const EpisodeListSheet = ({
     });
     return result;
   }, [episodes, searchQuery, sortOrder]);
-
-  const toggleSortOrder = () => {
-    setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
-  };
 
   const handleEpisodePress = useCallback(
     (episode: Episode) => {
@@ -115,18 +107,16 @@ const EpisodeListSheet = ({
   );
 
   const renderEpisodeCard = useCallback(
-    ({ item, index }: { item: Episode; index: number }) => {
-      return (
-        <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(280)}>
-          <EpisodeCard
-            testID={`episode-card-${index}`}
-            item={item}
-            fallbackImage={fallbackImage}
-            onPress={() => handleEpisodePress(item)}
-          />
-        </Animated.View>
-      );
-    },
+    ({ item, index }: { item: Episode; index: number }) => (
+      <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 40).duration(280)}>
+        <EpisodeCard
+          testID={`episode-card-${index}`}
+          item={item}
+          fallbackImage={fallbackImage}
+          onPress={() => handleEpisodePress(item)}
+        />
+      </Animated.View>
+    ),
     [fallbackImage, handleEpisodePress]
   );
 
@@ -146,20 +136,18 @@ const EpisodeListSheet = ({
       }}
       backgroundStyle={styles.sheetBg}
       handleIndicatorStyle={styles.sheetHandle}>
-      <View style={styles.sheetInner}>
+      <View className="flex-1">
         {/* Header */}
-        <View style={styles.sheetHeader}>
-          <View>
-            <Text style={styles.sheetTitle}>{type === 'sub' ? 'Subbed' : 'Dubbed'} Episodes</Text>
-            <Text style={styles.sheetSubtitle}>
-              {isLoading ? 'Loading episodes…' : `${episodes.length} Episodes Available`}
-            </Text>
-          </View>
+        <View className="border-b px-5 pb-[14px] pt-1" style={styles.headerBorder}>
+          <Text style={styles.sheetTitle}>{type === 'sub' ? 'Subbed' : 'Dubbed'} Episodes</Text>
+          <Text className="mt-[2px] text-[13px] text-white/45">
+            {isLoading ? 'Loading episodes…' : `${episodes.length} Episodes Available`}
+          </Text>
         </View>
 
         {/* Search + Sort */}
-        <View style={styles.filterRow}>
-          <View style={styles.searchBox}>
+        <View className="flex-row items-center gap-[10px] px-4 py-3">
+          <View className="flex-1 flex-row items-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[10px]">
             <SearchNormal1 size={18} color="#a3e635" />
             <TextInput
               style={styles.searchInput}
@@ -169,31 +157,37 @@ const EpisodeListSheet = ({
               onChangeText={setSearchQuery}
             />
           </View>
-
-          <ScalePressable onPress={toggleSortOrder} scaleTo={0.94} style={styles.sortBtn}>
+          <ScalePressable
+            onPress={() => setSortOrder((c) => (c === 'asc' ? 'desc' : 'asc'))}
+            scaleTo={0.94}
+            className="flex-row items-center gap-[5px] rounded-[14px] border border-lime-400/25 bg-white/[0.06] px-[14px] py-[10px]">
             {sortOrder === 'asc' ? (
               <ArrowDown2 size={18} color="#a3e635" />
             ) : (
               <ArrowUp2 size={18} color="#a3e635" />
             )}
-            <Text style={styles.sortLabel}>{sortOrder === 'asc' ? 'ASC' : 'DESC'}</Text>
+            <Text className="text-[13px] font-bold text-lime-400">
+              {sortOrder === 'asc' ? 'ASC' : 'DESC'}
+            </Text>
           </ScalePressable>
         </View>
 
         {/* List */}
-        <View style={styles.listWrapper}>
+        <View className="flex-1">
           {isLoading ? (
-            <View style={styles.centered}>
+            <View className="flex-1 items-center justify-center p-6">
               <ActivityIndicator size="large" color="#84cc16" />
-              <Text style={styles.loadingText}>Loading episodes...</Text>
+              <Text className="mt-[10px] text-[13px] text-white/45">Loading episodes...</Text>
             </View>
           ) : error ? (
-            <View style={styles.centered}>
-              <Text style={styles.errorText}>Failed to load episodes. Please try again.</Text>
+            <View className="flex-1 items-center justify-center p-6">
+              <Text className="text-center text-[15px] text-red-400">
+                Failed to load episodes. Please try again.
+              </Text>
             </View>
           ) : !filteredAndSortedEpisodes.length ? (
-            <View style={styles.centered}>
-              <Text style={styles.emptyText}>
+            <View className="flex-1 items-center justify-center p-6">
+              <Text className="text-center text-[15px] text-white/45">
                 {searchQuery
                   ? 'No episodes found matching your search'
                   : `No ${type === 'sub' ? 'subbed' : 'dubbed'} episodes available`}
@@ -222,100 +216,14 @@ const EpisodeListSheet = ({
 export default EpisodeListSheet;
 
 const styles = StyleSheet.create({
-  sheetBg: {
-    backgroundColor: '#111310',
-  },
-  sheetHandle: {
-    backgroundColor: '#3a3a3a',
-  },
-  sheetInner: {
-    flex: 1,
-  },
-  sheetHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
-    paddingBottom: 14,
+  // background colors that can't be expressed as Tailwind classes easily
+  sheetBg: { backgroundColor: '#111310' },
+  sheetHandle: { backgroundColor: '#3a3a3a' },
+  headerBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  sheetTitle: {
-    color: '#ffffff',
-    fontFamily: 'Salsa-Regular',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  sheetSubtitle: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 14,
-  },
-  sortBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(163,230,53,0.25)',
-  },
-  sortLabel: {
-    color: '#a3e635',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  listWrapper: {
-    flex: 1,
-  },
-  listContent: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  loadingText: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 13,
-    marginTop: 10,
-  },
-  errorText: {
-    color: '#f87171',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  emptyText: {
-    color: 'rgba(255,255,255,0.45)',
-    fontSize: 15,
-    textAlign: 'center',
-  },
+  sheetTitle: { color: '#ffffff', fontFamily: 'Salsa-Regular', fontSize: 22, fontWeight: '700' },
+  searchInput: { flex: 1, color: '#ffffff', fontSize: 14 },
+  listContent: { paddingVertical: 10, paddingHorizontal: 14, gap: 10 },
 });

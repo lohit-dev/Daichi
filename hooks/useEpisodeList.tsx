@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { Episode } from '~/components/watch/EpisodeList';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
@@ -36,6 +36,13 @@ export const useEpisodeList = (
   fallbackImage?: string,
   malId?: number | null
 ) => {
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const episodesQuery = useQuery<AnikotoEpisode[]>({
     queryKey: ['anikoto', 'episodes', animeId],
     queryFn: () => fetchAnimeEpisode(animeId),
@@ -57,8 +64,6 @@ export const useEpisodeList = (
   });
 
   const kitsuImagesQuery = useInfiniteQuery({
-    // Bump this identity after the old all-pages implementation could cache an
-    // empty result for long-running series such as One Piece.
     queryKey: ['kitsu', 'episode-images-v2', kitsuAnimeQuery.data],
     queryFn: ({ pageParam }) => fetchKitsuEpisodeImagePage(kitsuAnimeQuery.data!, pageParam),
     initialPageParam: 0,
@@ -67,6 +72,24 @@ export const useEpisodeList = (
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
+
+  // Eagerly fetch all remaining Kitsu pages in the background so thumbnails
+  // and descriptions appear for all episodes without waiting for scroll events.
+  // BottomSheetFlatList doesn't reliably fire onEndReached, so we prefetch.
+  useEffect(() => {
+    if (
+      mountedRef.current &&
+      kitsuImagesQuery.hasNextPage &&
+      !kitsuImagesQuery.isFetchingNextPage
+    ) {
+      kitsuImagesQuery.fetchNextPage();
+    }
+  }, [
+    kitsuImagesQuery.hasNextPage,
+    kitsuImagesQuery.isFetchingNextPage,
+    kitsuImagesQuery.fetchNextPage,
+    kitsuImagesQuery.data?.pages.length,
+  ]);
 
   const canFetchAniListFallback =
     (!resolvedMalId || kitsuAnimeQuery.isSuccess) &&

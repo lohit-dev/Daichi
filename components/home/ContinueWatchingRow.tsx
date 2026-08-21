@@ -12,12 +12,8 @@ import { formatTime, wp } from '~/helpers/common';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
 import { fetchAniListStreamingEpisodeImages } from '~/services/AniListService';
 
-// ─── Card dimensions ─────────────────────────────────────────────────────────
-
 const CARD_WIDTH = wp(50);
-const CARD_HEIGHT = CARD_WIDTH * (10 / 16); // slightly taller than 16:9
-
-// ─── Card ─────────────────────────────────────────────────────────────────────
+const CARD_HEIGHT = CARD_WIDTH * (10 / 16);
 
 type CardProps = {
   item: HistoryItem;
@@ -26,18 +22,15 @@ type CardProps = {
 };
 
 const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
-  // Fetch AniList streaming episode thumbnails for this anime (cached by React Query)
   const { data: episodeImages } = useQuery({
     queryKey: ['anilist', 'streaming-episode-images-v2', item.animeId],
     queryFn: () => fetchAniListStreamingEpisodeImages(item.animeId),
     staleTime: 30 * 60 * 1000,
-    enabled: !item.episodeThumbnail, // skip if already stored at watch time
+    enabled: !item.episodeThumbnail,
   });
 
-  // Priority: stored thumbnail → AniList query → anime cover
   const thumbnail = useMemo(() => {
     if (item.episodeThumbnail) return item.episodeThumbnail;
-
     if (episodeImages?.length) {
       const map = new Map(
         episodeImages.flatMap((image) => {
@@ -48,14 +41,12 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
       const found = map.get(getEpisodeNumberKey(item.episodeNumber) || '');
       if (found) return found;
     }
-
     return item.animeImage;
   }, [item.episodeThumbnail, item.episodeNumber, item.animeImage, episodeImages]);
 
   const progressRatio =
     item.duration > 0 ? Math.min(Math.max(item.progress / item.duration, 0), 1) : 0;
   const progressPercent = `${(progressRatio * 100).toFixed(1)}%` as `${number}%`;
-
   const progressText = `${formatTime(item.progress)}/${formatTime(item.duration)}`;
 
   const handlePress = () => {
@@ -80,15 +71,13 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
       entering={FadeInRight.delay(index * 70).duration(380)}
       style={styles.cardWrapper}>
       <ScalePressable onPress={handlePress} scaleTo={0.96}>
-        {/* Thumbnail */}
         <ImageBackground
           source={{ uri: thumbnail }}
           style={styles.thumb}
           imageStyle={styles.thumbImage}>
-          {/* subtle scrim */}
           <View style={styles.scrim} />
 
-          {/* × remove — top right */}
+          {/* Remove button */}
           <ScalePressable
             onPress={() => onRemove(item.animeId)}
             scaleTo={0.88}
@@ -97,23 +86,24 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
             <CloseCircle size={20} color="#fff" variant="Bold" />
           </ScalePressable>
 
-          {/* Bottom row: EP badge + timestamp */}
           <View style={styles.bottomRow}>
-            <View style={styles.epBadge}>
-              <Text style={styles.epBadgeText}>EP {item.episodeNumber}</Text>
+            <View className="rounded-[5px] bg-black/[0.68] px-[6px] py-[2px]">
+              <Text className="text-[10px] font-[800] tracking-[0.3px] text-white">
+                EP {item.episodeNumber}
+              </Text>
             </View>
-            <View style={styles.timeBadge}>
-              <Text style={styles.timeBadgeText}>{progressText}</Text>
+            <View className="rounded-[5px] bg-black/[0.68] px-[6px] py-[2px]">
+              <Text className="text-[9px] font-[700] tracking-[0.1px] text-white">
+                {progressText}
+              </Text>
             </View>
           </View>
 
-          {/* YouTube-style red progress bar — no dot */}
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: progressPercent }]} />
           </View>
         </ImageBackground>
 
-        {/* Anime title */}
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.animeTitle}
         </Text>
@@ -121,8 +111,6 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
     </Animated.View>
   );
 };
-
-// ─── Row ─────────────────────────────────────────────────────────────────────
 
 const ContinueWatchingRow = () => {
   const history = useHistoryStore((s) => s.history);
@@ -137,10 +125,9 @@ const ContinueWatchingRow = () => {
 
   return (
     <View>
-      <View style={styles.header}>
+      <View className="px-4 pb-3 pt-7">
         <Text style={styles.headerTitle}>{getFormattedTitle('Continue Watching')}</Text>
       </View>
-
       <FlatList
         horizontal
         data={items}
@@ -160,25 +147,7 @@ const ContinueWatchingRow = () => {
 export default ContinueWatchingRow;
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 28,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    color: '#ffffff',
-    fontFamily: 'Salsa-Regular',
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  list: {
-    paddingHorizontal: 12,
-    paddingBottom: 4,
-  },
-  cardWrapper: {
-    width: CARD_WIDTH,
-    marginHorizontal: 5,
-  },
+  cardWrapper: { width: CARD_WIDTH, marginHorizontal: 5 },
   thumb: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
@@ -187,10 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     justifyContent: 'space-between',
   },
-  thumbImage: {
-    borderRadius: 10,
-    resizeMode: 'cover',
-  },
+  thumbImage: { borderRadius: 10, resizeMode: 'cover' },
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.22)',
@@ -205,38 +171,13 @@ const styles = StyleSheet.create({
   },
   bottomRow: {
     position: 'absolute',
-    bottom: 14, // above the progress bar
+    bottom: 14,
     left: 7,
     right: 7,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  epBadge: {
-    backgroundColor: 'rgba(0,0,0,0.68)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  epBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.3,
-  },
-  timeBadge: {
-    backgroundColor: 'rgba(0,0,0,0.68)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  timeBadgeText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.1,
-  },
-  // YouTube-style red progress bar pinned to very bottom of thumbnail
   progressTrack: {
     position: 'absolute',
     bottom: 0,
@@ -245,10 +186,8 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: 'rgba(255,255,255,0.25)',
   },
-  progressFill: {
-    height: 3,
-    backgroundColor: '#ef4444', // red-500
-  },
+  progressFill: { height: 3, backgroundColor: '#ef4444' },
+  headerTitle: { color: '#ffffff', fontFamily: 'Salsa-Regular', fontSize: 24, fontWeight: '600' },
   cardTitle: {
     marginTop: 7,
     color: '#e8e8e8',
@@ -256,4 +195,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     paddingHorizontal: 2,
   },
+  list: { paddingHorizontal: 12, paddingBottom: 4 },
 });
