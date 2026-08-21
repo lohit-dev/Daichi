@@ -2,7 +2,6 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { View, Text, ActivityIndicator, Animated, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import TextTicker from 'react-native-text-ticker';
 
 import ScalePressable from '../shared/ScalePressable';
@@ -59,7 +58,6 @@ const PlayerOverlay = ({
   const flash = usePlayerStore((s) => s.flash);
   const isBuffering = usePlayerStore((s) => s.isBuffering);
   const isPiP = usePlayerStore((s) => s.isPiP);
-  const insets = useSafeAreaInsets();
 
   // Actions
   const togglePlaying = usePlayerStore((s) => s.togglePlaying);

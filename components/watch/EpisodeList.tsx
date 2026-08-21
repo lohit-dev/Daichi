@@ -13,6 +13,8 @@ type EpisodeListProps = {
   fallbackImage?: string;
   onSelectEpisode: (episode: Episode) => void;
   bottomPadding?: number;
+  onEndReached?: () => void;
+  hasMoreImages?: boolean;
 };
 
 // Row height for getItemLayout (card 88 + marginBottom 8)
@@ -27,6 +29,8 @@ const EpisodeList = ({
   fallbackImage,
   onSelectEpisode,
   bottomPadding = 40,
+  onEndReached,
+  hasMoreImages,
 }: EpisodeListProps) => {
   const listRef = useRef<FlatList<Episode>>(null);
   const [jumpValue, setJumpValue] = useState('');
@@ -116,6 +120,8 @@ const EpisodeList = ({
         windowSize={5}
         removeClippedSubviews
         renderItem={renderItem}
+        onEndReached={hasMoreImages ? onEndReached : undefined}
+        onEndReachedThreshold={0.6}
       />
     </View>
   );

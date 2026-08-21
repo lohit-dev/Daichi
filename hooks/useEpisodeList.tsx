@@ -4,7 +4,6 @@ import { useCallback, useMemo } from 'react';
 import type { Episode } from '~/components/watch/EpisodeList';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
 import {
-  fetchAniListAnimeById,
   fetchAniListStreamingEpisodeImages,
   fetchKitsuEpisodeImagePage,
   resolveKitsuAnimeIdFromMal,
@@ -37,14 +36,9 @@ export const useEpisodeList = (
   fallbackImage?: string,
   malId?: number | null
 ) => {
-  const episodesQuery = useQuery<Episode[]>({
-    queryKey: ['anikoto', 'episodes', animeId, type],
-    queryFn: async () => {
-      const episodes = await fetchAnimeEpisode(animeId);
-      return episodes
-        .filter((episode) => (type ? Boolean(episode[type]) : episode.sub || episode.dub))
-        .map(mapEpisode);
-    },
+  const episodesQuery = useQuery<AnikotoEpisode[]>({
+    queryKey: ['anikoto', 'episodes', animeId],
+    queryFn: () => fetchAnimeEpisode(animeId),
     // Episode availability is independent from the optional MAL ID used for
     // Kitsu thumbnail mapping.
     enabled: !!animeId,
@@ -53,25 +47,11 @@ export const useEpisodeList = (
 
   // Kitsu is intentionally the first source. AniList fills only missing
   // episodes, and the anime cover is the final per-episode fallback.
-  const animeMetadataQuery = useQuery({
-    queryKey: ['anilist', 'anime-mal-id', animeId],
-    queryFn: async () => {
-      try {
-        return await fetchAniListAnimeById(animeId);
-      } catch {
-        return null;
-      }
-    },
-    enabled: !!animeId,
-    staleTime: 30 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-  });
-
-  const resolvedMalId = malId ?? animeMetadataQuery.data?.malId;
+  const resolvedMalId = malId;
   const kitsuAnimeQuery = useQuery({
     queryKey: ['kitsu', 'anime-id', resolvedMalId],
     queryFn: () => resolveKitsuAnimeIdFromMal(resolvedMalId!),
-    enabled: (malId != null || animeMetadataQuery.isSuccess) && Boolean(resolvedMalId),
+    enabled: Boolean(resolvedMalId),
     staleTime: 24 * 60 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
   });
@@ -89,7 +69,6 @@ export const useEpisodeList = (
   });
 
   const canFetchAniListFallback =
-    (malId != null || animeMetadataQuery.isSuccess) &&
     (!resolvedMalId || kitsuAnimeQuery.isSuccess) &&
     (!kitsuAnimeQuery.data || kitsuImagesQuery.isSuccess);
   const anilistImagesQuery = useQuery({
@@ -130,24 +109,28 @@ export const useEpisodeList = (
       }
     }
 
-    return episodesQuery.data.map((episode) => {
-      const meta = metadataMap.get(getEpisodeNumberKey(episode.number) || '');
-      const thumbnail = meta?.thumbnail;
-      const description = meta?.description;
-      const airDate = meta?.airDate;
-      return {
-        ...episode,
-        image: thumbnail || (anilistImagesQuery.isSuccess ? fallbackImage : episode.image),
-        description: description || episode.description,
-        airDate: airDate || episode.airDate,
-      };
-    });
+    return episodesQuery.data
+      .filter((episode) => (type ? Boolean(episode[type]) : episode.sub || episode.dub))
+      .map(mapEpisode)
+      .map((episode) => {
+        const meta = metadataMap.get(getEpisodeNumberKey(episode.number) || '');
+        const thumbnail = meta?.thumbnail;
+        const description = meta?.description;
+        const airDate = meta?.airDate;
+        return {
+          ...episode,
+          image: thumbnail || (anilistImagesQuery.isSuccess ? fallbackImage : episode.image),
+          description: description || episode.description,
+          airDate: airDate || episode.airDate,
+        };
+      });
   }, [
     anilistImagesQuery.data,
     anilistImagesQuery.isSuccess,
     episodesQuery.data,
     fallbackImage,
     kitsuImagesQuery.data,
+    type,
   ]);
 
   const loadMoreImages = useCallback(() => {

@@ -1,5 +1,4 @@
-import { cleanHtml, formatIdToTitle } from '~/helpers/common';
-import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
+import { cleanHtml, formatIdToTitle } from '~/helpers/text';
 import {
   AniListAnimeDetails,
   AniListHomeResponse,
@@ -1032,35 +1031,6 @@ const mapKitsuEpisodeMetadata = (
   };
 };
 
-export const fetchKitsuEpisodeImagesByMalId = async (
-  malId: number | string | null | undefined,
-  maxPages = Number.POSITIVE_INFINITY
-): Promise<AniListEpisodeImage[]> => {
-  if (!malId || Number(malId) <= 0) return [];
-
-  const kitsuAnimeId = await resolveKitsuAnimeIdFromMal(malId);
-  if (!kitsuAnimeId) {
-    return [];
-  }
-
-  try {
-    const allEpisodes: AniListEpisodeImage[] = [];
-    let offset = 0;
-    let pageCount = 0;
-    while (true) {
-      const page = await fetchKitsuEpisodeImagePage(kitsuAnimeId, offset);
-      allEpisodes.push(...page.images);
-      pageCount += 1;
-      if (!page.nextOffset || pageCount >= maxPages) break;
-      offset = page.nextOffset;
-    }
-
-    return allEpisodes;
-  } catch {
-    return [];
-  }
-};
-
 /** Fetch one Kitsu page so episode artwork can appear immediately instead of after a long series. */
 export const fetchKitsuEpisodeImagePage = async (
   kitsuAnimeId: string,
@@ -1079,7 +1049,11 @@ export const fetchKitsuEpisodeImagePage = async (
     const rawEpisodes = payload.data ?? [];
     const images = rawEpisodes
       .map(mapKitsuEpisodeMetadata)
-      .filter((episode): episode is KitsuEpisodeMetadata => Boolean(episode?.thumbnail))
+      // Keep episodes that have at least a thumbnail OR a description so we
+      // never silently discard rich metadata for thumbnail-less episodes.
+      .filter((episode): episode is KitsuEpisodeMetadata =>
+        Boolean(episode?.thumbnail || episode?.description || episode?.synopsis)
+      )
       .map(
         (ep) =>
           ({
@@ -1163,29 +1137,6 @@ export const fetchAniListStreamingEpisodeImages = async (
     return [];
   }
 };
-
-export const fetchEpisodeImagesForAnime = async (
-  animeId: string,
-  malId?: number | null
-): Promise<AniListEpisodeImage[]> => {
-  const results = new Map<string, AniListEpisodeImage>();
-  const [kitsuImages, anilistImages] = await Promise.all([
-    fetchKitsuEpisodeImagesByMalId(malId),
-    fetchAniListStreamingEpisodeImages(animeId),
-  ]);
-
-  for (const image of [...kitsuImages, ...anilistImages]) {
-    const key = getEpisodeNumberKey(image.number);
-    if (key && !results.has(key)) results.set(key, image);
-  }
-
-  return Array.from(results.values()).sort((a, b) => a.number - b.number);
-};
-
-export const fetchAniListEpisodeImages = async (
-  animeId: string,
-  malId?: number | null
-): Promise<AniListEpisodeImage[]> => fetchEpisodeImagesForAnime(animeId, malId);
 
 // ---------------------------------------------------------------------------
 // Browse (View All) – paginated by category key

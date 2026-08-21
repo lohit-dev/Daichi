@@ -433,6 +433,7 @@ const AnimeDetails = () => {
               type: selectedType,
               animeTitle: animeData.title,
               animeImage: animeData.image,
+              malId: animeData.malId == null ? undefined : String(animeData.malId),
               episodeTitle: title,
               episodeDescription: description,
               episodeThumbnail: image,

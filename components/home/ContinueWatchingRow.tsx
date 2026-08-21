@@ -10,7 +10,7 @@ import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { formatTime, wp } from '~/helpers/common';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
-import { fetchAniListEpisodeImages } from '~/services/AniListService';
+import { fetchAniListStreamingEpisodeImages } from '~/services/AniListService';
 
 // ─── Card dimensions ─────────────────────────────────────────────────────────
 
@@ -28,8 +28,8 @@ type CardProps = {
 const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
   // Fetch AniList streaming episode thumbnails for this anime (cached by React Query)
   const { data: episodeImages } = useQuery({
-    queryKey: ['anilist', 'episode-images', item.animeId],
-    queryFn: () => fetchAniListEpisodeImages(item.animeId),
+    queryKey: ['anilist', 'streaming-episode-images-v2', item.animeId],
+    queryFn: () => fetchAniListStreamingEpisodeImages(item.animeId),
     staleTime: 30 * 60 * 1000,
     enabled: !item.episodeThumbnail, // skip if already stored at watch time
   });

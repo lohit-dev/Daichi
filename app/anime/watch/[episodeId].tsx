@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ArrowLeft } from 'iconsax-react-native';
+// import { ArrowLeft } from 'iconsax-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -15,6 +15,7 @@ import {
   Animated,
   useWindowDimensions,
 } from 'react-native';
+import { Appbar } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 
@@ -55,6 +56,7 @@ const WatchScreen = () => {
     type,
     animeTitle,
     animeImage,
+    malId: malIdParam,
     episodeTitle: paramEpisodeTitle,
     episodeDescription: paramEpisodeDescription,
     episodeThumbnail: paramEpisodeThumbnail,
@@ -65,6 +67,7 @@ const WatchScreen = () => {
     type: 'sub' | 'dub';
     animeTitle?: string;
     animeImage?: string;
+    malId?: string;
     episodeTitle?: string;
     episodeDescription?: string;
     episodeThumbnail?: string;
@@ -91,7 +94,12 @@ const WatchScreen = () => {
   // -----------------------------------------------------------------------
 
   const displayTitle = animeTitle || formatIdToTitle(animeId);
-  const { data: episodeListData } = useEpisodeList(animeId, type, animeImage);
+  const malId = malIdParam ? Number(malIdParam) : undefined;
+  const {
+    data: episodeListData,
+    loadMoreImages,
+    hasMoreImages,
+  } = useEpisodeList(animeId, type, animeImage, malId);
   const episodes = episodeListData ?? [];
   const bottomDockSpace = insets.bottom + 120;
 
@@ -214,12 +222,6 @@ const WatchScreen = () => {
     if (currentIndex === -1) return null;
     return episodes[currentIndex + 1] ?? null;
   }, [episodes, episodeId]);
-
-  // Episode thumbnail for history
-  const currentEpisodeThumbnail = useMemo(
-    () => episodes.find((ep) => ep.id === episodeId)?.image,
-    [episodes, episodeId]
-  );
 
   const pendingEpisodeNavigationRef = useRef<string | null>(null);
   useEffect(() => {
@@ -384,13 +386,27 @@ const WatchScreen = () => {
       <StatusBar hidden={isFullscreen} style="light" />
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* ── Top App Bar (hidden in fullscreen / PiP) ─────────────────── */}
+      {!isFullscreen && !isPiP && (
+        <Appbar.Header style={styles.appBar} statusBarHeight={insets.top}>
+          <Appbar.BackAction onPress={handleExit} color="#FFFFFF" size={22} />
+          <Appbar.Content title={displayTitle} titleStyle={styles.appBarTitle} />
+          <Appbar.Action
+            icon="share-variant-outline"
+            color="rgba(255,255,255,0.65)"
+            size={20}
+            onPress={handleShare}
+          />
+        </Appbar.Header>
+      )}
+
       {/* ── Video Player ─────────────────────────────────────────────── */}
       <View
         style={[
           { backgroundColor: COLORS.bg, overflow: 'hidden' },
           isFullscreen
             ? [StyleSheet.absoluteFill, { zIndex: 1000 }]
-            : { height: 236, width: '100%', marginTop: insets.top },
+            : { height: 236, width: '100%' },
         ]}
         onLayout={(e) => {
           playerWidthRef.current = e.nativeEvent.layout.width;
@@ -444,7 +460,6 @@ const WatchScreen = () => {
         />
       </View>
 
-      {/* ── Content Container: Animated Sliding Panels (Episodes & Chat) ── */}
       <View
         style={{ flex: 1, overflow: 'hidden', display: isFullscreen || isPiP ? 'none' : 'flex' }}>
         <Animated.View
@@ -515,6 +530,8 @@ const WatchScreen = () => {
               fallbackImage={animeImage}
               bottomPadding={bottomDockSpace}
               onSelectEpisode={(ep) => goToEpisode(ep)}
+              onEndReached={loadMoreImages}
+              hasMoreImages={hasMoreImages}
             />
           </Animated.View>
 
@@ -610,6 +627,19 @@ const WatchScreen = () => {
 export default WatchScreen;
 
 const styles = StyleSheet.create({
+  // Top app bar
+  appBar: {
+    backgroundColor: COLORS.bg,
+    elevation: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  appBarTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
   // Info section
   infoSection: {
     paddingHorizontal: 16,

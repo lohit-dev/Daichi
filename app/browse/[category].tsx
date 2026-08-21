@@ -142,7 +142,7 @@ export default function BrowseScreen() {
         removeClippedSubviews
       />
 
-      {/* global loading indicator while first page refetches */}
+      {/* Show a full-screen spinner when refetching an empty list */}
       {isFetching && !isFetchingNextPage && items.length === 0 && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <ActivityIndicator size="large" color="#a3e635" style={{ marginTop: hp(40) }} />
