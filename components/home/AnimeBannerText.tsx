@@ -43,7 +43,7 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
       <Animated.View style={[styles.container, animatedStyle]}>
         <View
           className="absolute bottom-2 left-0 right-0 px-3 text-center"
-          style={[styles.titleBlock, { height: titleHeight }]}>
+          style={[{ height: titleHeight }]}>
           <Text
             className="px-2 pt-3 text-center font-salsa text-3xl font-semibold text-white"
             numberOfLines={2}
@@ -73,5 +73,4 @@ export default AnimeBannerText;
 
 const styles = StyleSheet.create({
   container: { width: wp(100), height: hp(50) },
-  titleBlock: { fontFamily: 'Salsa-Regular' },
 });
