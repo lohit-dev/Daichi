@@ -17,7 +17,6 @@ import {
   Animated,
   useWindowDimensions,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReAnimated, {
   interpolate,
   useAnimatedReaction,
@@ -26,6 +25,7 @@ import ReAnimated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 
 import { useHistoryStore } from '~/app/_store/useHistoryStore';
