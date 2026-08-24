@@ -6,7 +6,7 @@ import AnimeCard from '../shared/AnimeCard';
 import ScalePressable from '../shared/ScalePressable';
 
 import { getFormattedTitle } from '~/helpers/TextFormat';
-import { hp, wp } from '~/helpers/common';
+import { wp } from '~/helpers/common';
 import { BrowseCategory } from '~/services/AniListService';
 import { Anime } from '~/types';
 

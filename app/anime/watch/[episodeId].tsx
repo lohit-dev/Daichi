@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import {
   View,
@@ -33,6 +33,7 @@ import { usePlayerStore, RESIZE_MODES } from '~/app/_store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import type { Episode } from '~/components/watch/EpisodeList';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
+import { getFormattedTitle } from '~/helpers/TextFormat';
 import { formatIdToTitle, formatTime } from '~/helpers/common';
 import { clamp } from '~/helpers/subtitles';
 import { useEpisodeList } from '~/hooks/useEpisodeList';
@@ -759,8 +760,8 @@ const WatchSettingsSheet = (props: SettingsContentProps & { sheetAnim: Animated.
 // Episode card + list
 // ===========================================================================
 
-const EP_CARD_HEIGHT = 88;
-const EP_ROW_HEIGHT = EP_CARD_HEIGHT + 10;
+// const EP_CARD_HEIGHT = 88;
+// const EP_ROW_HEIGHT = EP_CARD_HEIGHT + 10;
 
 const WatchEpisodeCard = React.memo(
   ({
@@ -974,10 +975,11 @@ const EpisodesSectionHeader = ({
         size={12}
         color={sortOrder === 'desc' ? COLORS.accent : COLORS.textMuted}
       />
-      <Text
-        className="text-[12px] font-semibold"
-        style={{ color: sortOrder === 'desc' ? COLORS.accent : COLORS.textMuted }}>
-        {sortOrder === 'desc' ? `Ep ${count}–1` : `Ep 1–${count}`}
+      <Text className="text-[12px] font-semibold" style={{ color: COLORS.textMuted }}>
+        <Text style={{ color: COLORS.textMuted }}>Ep </Text>
+        <Text style={{ color: COLORS.accent }}>
+          {sortOrder === 'desc' ? `${count}–1` : `1–${count}`}
+        </Text>
       </Text>
     </ScalePressable>
   </View>
@@ -1554,13 +1556,18 @@ const WatchScreen = () => {
   useEffect(() => {
     const second = Math.floor(currentTime);
     const previous = lastSavedProgressRef.current;
-    if (second <= 0 || (previous?.episodeId === episodeId && second - previous.second < 5)) return;
+    if (
+      second <= 0 ||
+      !animeImage ||
+      (previous?.episodeId === episodeId && second - previous.second < 5)
+    )
+      return;
     lastSavedProgressRef.current = { episodeId, second };
     saveProgress({
       animeId,
       animeSlug,
       animeTitle: animeTitle || formatIdToTitle(animeId),
-      animeImage: animeImage || '',
+      animeImage,
       episodeId,
       episodeNumber: currentEpisode?.number ? String(currentEpisode.number) : episodeId,
       episodeTitle: activeEpisodeTitle,
@@ -1666,12 +1673,14 @@ const WatchScreen = () => {
     <View className="gap-1 pb-1.5 pt-3.5">
       <View className="flex-row items-start justify-between gap-2.5">
         <View className="min-w-0 flex-1">
-          <Text className="text-[19px] font-bold text-white">{activeEpisodeTitle}</Text>
+          <Text className="text-[19px] font-bold text-white">
+            {getFormattedTitle(activeEpisodeTitle)}
+          </Text>
           <Text
             numberOfLines={1}
             className="mt-[3px] text-[12px] font-semibold"
             style={{ color: COLORS.textMuted }}>
-            {displayTitle}
+            {getFormattedTitle(displayTitle)}
           </Text>
         </View>
         <View className="flex-shrink-0 flex-row gap-2">
@@ -1751,7 +1760,7 @@ const WatchScreen = () => {
         <Text
           className="mt-3 text-[13px] leading-[19px]"
           style={{ color: 'rgba(255,255,255,0.68)' }}>
-          {activeEpisodeDescription}
+          {getFormattedTitle(activeEpisodeDescription, undefined, true)}
         </Text>
       ) : null}
     </View>
