@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import {
   Notification,
   Profile2User,
@@ -7,22 +8,66 @@ import {
   ArrowRight2,
   Moon,
   Logout,
+  Code1,
 } from 'iconsax-react-native';
 import { useState } from 'react';
-import { ScrollView, Text, View, Switch, Image } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  View,
+  Switch,
+  Image,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import ScalePressable from '~/components/shared/ScalePressable';
 
 const Settings = () => {
+  const router = useRouter();
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [autoPlay, setAutoPlay] = useState(true);
-  // const _router = useRouter();
+
+  // Dev mode password modal state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleLogout = () => {
     //
+  };
+
+  const handleOpenDevPlayer = () => {
+    setPasswordInput('');
+    setPasswordError('');
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSubmitPassword = () => {
+    if (passwordInput.trim().toLowerCase() === 'mangarock') {
+      setIsPasswordModalOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      router.push({
+        pathname: '/anime/watch/[episodeId]',
+        params: {
+          episodeId: '8',
+          animeId: '21355',
+          type: 'sub',
+          animeTitle: 'Re:ZERO -Starting Life in Another World-',
+          malId: '31240',
+          episodeTitle: 'The End of the Beginning and the Beginning of the End',
+        },
+      });
+    } else {
+      setPasswordError('Incorrect password. Please try again.');
+    }
   };
 
   const settingsOptions = [
@@ -78,6 +123,12 @@ const Settings = () => {
       ),
     },
     {
+      icon: <Code1 size={24} color="#a3e635" variant="Bold" />,
+      title: 'Dev: Test Episode Player',
+      subtitle: 'Detective Conan (Ep 1) test stream',
+      onPress: handleOpenDevPlayer,
+    },
+    {
       icon: <Logout size={24} color="#ef4444" variant="Bold" />,
       title: 'Logout',
       subtitle: 'Sign out of your account',
@@ -126,6 +177,57 @@ const Settings = () => {
           ))}
         </View>
       </ScrollView>
+
+      {/* Dev Password Modal */}
+      <Modal
+        visible={isPasswordModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsPasswordModalOpen(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1 items-center justify-center bg-black/75 px-6">
+          <View className="w-full max-w-sm rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+            <Text className="font-salsa text-xl text-white">Developer Mode</Text>
+            <Text className="mt-1 text-sm text-neutral-400">
+              Enter the developer password to access the test episode player.
+            </Text>
+
+            <TextInput
+              value={passwordInput}
+              onChangeText={(text) => {
+                setPasswordInput(text);
+                if (passwordError) setPasswordError('');
+              }}
+              placeholder="Enter password"
+              placeholderTextColor="#737373"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              className="mt-4 rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3 text-white"
+            />
+
+            {passwordError ? (
+              <Text className="mt-2 text-xs text-red-400">{passwordError}</Text>
+            ) : null}
+
+            <View className="mt-6 flex-row justify-end space-x-3">
+              <TouchableOpacity
+                onPress={() => setIsPasswordModalOpen(false)}
+                className="rounded-xl px-4 py-2.5">
+                <Text className="font-salsa text-neutral-400">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSubmitPassword}
+                className="rounded-xl bg-lime-400 px-5 py-2.5">
+                <Text className="font-salsa font-bold text-neutral-950">Enter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
