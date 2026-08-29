@@ -9,6 +9,7 @@ import {
   Text,
   Image,
   ActivityIndicator,
+  InteractionManager,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -1078,10 +1079,10 @@ const WatchEpisodeList = ({
     if (sortOrder !== 'asc') return;
     if (activeAscIndex <= 0 || episodes.length === 0) return;
     hasScrolledToActive.current = false;
-    const timer = setTimeout(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
       scrollToActiveEpisode(infoHeightRef.current, activeAscIndex);
-    }, 120);
-    return () => clearTimeout(timer);
+    });
+    return () => task.cancel();
   }, [activeAscIndex, currentEpisodeId, episodes.length, sortOrder, scrollToActiveEpisode]);
 
   const listData = useMemo(
@@ -1145,7 +1146,11 @@ const WatchEpisodeList = ({
     ]
   );
 
-  const initialRenderCount = Math.max(activeAscIndex + 12, 25);
+  // Never render every row before the active episode. On Android this used
+  // to mount hundreds of cards when opening episode 200+, blocking the JS
+  // thread and making the player feel stuck. The offset jump below works
+  // with virtualized rows, so the initial batch can stay small and stable.
+  const initialRenderCount = Math.min(10, listData.length);
 
   return (
     <AnimatedFlatList
@@ -1164,9 +1169,11 @@ const WatchEpisodeList = ({
         return null;
       }}
       initialNumToRender={initialRenderCount}
-      maxToRenderPerBatch={initialRenderCount}
-      windowSize={11}
-      removeClippedSubviews={false}
+      maxToRenderPerBatch={8}
+      updateCellsBatchingPeriod={40}
+      windowSize={7}
+      removeClippedSubviews
+      keyboardShouldPersistTaps="handled"
       renderItem={renderItem}
       onEndReached={hasMoreImages ? onEndReached : undefined}
       onEndReachedThreshold={0.6}

@@ -1,18 +1,41 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { ArrowLeft } from 'iconsax-react-native';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useMemo, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
 const TrailerScreen = () => {
   const router = useRouter();
   const { videoId, title } = useLocalSearchParams<{ videoId: string; title?: string }>();
-  const [playerSize, setPlayerSize] = useState({ width: 0, height: 0 });
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [isReady, setIsReady] = useState(false);
   const [shouldPlay, setShouldPlay] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The YouTube iframe always renders its HTML at 16:9 from its *width*.
+  // Passing the full landscape screen height made that HTML taller than short
+  // devices' viewports, leaving a scrollable video. Fit a 16:9 frame inside
+  // the actual safe viewport instead.
+  const playerSize = useMemo(() => {
+    const availableWidth = Math.max(0, windowWidth - insets.left - insets.right);
+    const availableHeight = Math.max(0, windowHeight - insets.top - insets.bottom);
+    const width = Math.min(availableWidth, Math.round(availableHeight * (16 / 9)));
+
+    return {
+      width,
+      height: Math.round(width * (9 / 16)),
+    };
+  }, [insets.bottom, insets.left, insets.right, insets.top, windowHeight, windowWidth]);
 
   const closeTrailer = useCallback(() => {
     if (router.canGoBack()) {
@@ -45,41 +68,38 @@ const TrailerScreen = () => {
   );
 
   return (
-    <View
-      style={styles.screen}
-      onLayout={({ nativeEvent: { layout } }) => {
-        const nextSize = { width: Math.round(layout.width), height: Math.round(layout.height) };
-        setPlayerSize((currentSize) =>
-          currentSize.width === nextSize.width && currentSize.height === nextSize.height
-            ? currentSize
-            : nextSize
-        );
-      }}>
+    <View style={styles.screen}>
       {videoId && playerSize.width > 0 && playerSize.height > 0 ? (
-        <YoutubePlayer
-          height={playerSize.height}
-          width={playerSize.width}
-          videoId={videoId}
-          play={shouldPlay}
-          forceAndroidAutoplay
-          onReady={() => {
-            setIsReady(true);
-            setShouldPlay(true);
-          }}
-          onError={(youtubeError: string) => setError(youtubeError)}
-          onChangeState={handleStateChange}
-          initialPlayerParams={{
-            controls: true,
-            preventFullScreen: true,
-            rel: false,
-          }}
-          webViewProps={{
-            allowsInlineMediaPlayback: true,
-            mediaPlaybackRequiresUserAction: false,
-          }}
-          viewContainerStyle={styles.player}
-          webViewStyle={styles.player}
-        />
+        <View style={styles.playerStage}>
+          <YoutubePlayer
+            height={playerSize.height}
+            width={playerSize.width}
+            videoId={videoId}
+            play={shouldPlay}
+            forceAndroidAutoplay
+            onReady={() => {
+              setIsReady(true);
+              setShouldPlay(true);
+            }}
+            onError={(youtubeError: string) => setError(youtubeError)}
+            onChangeState={handleStateChange}
+            initialPlayerParams={{
+              controls: true,
+              preventFullScreen: true,
+              rel: false,
+            }}
+            webViewProps={{
+              allowsInlineMediaPlayback: true,
+              mediaPlaybackRequiresUserAction: false,
+              scrollEnabled: false,
+              bounces: false,
+              overScrollMode: 'never',
+              nestedScrollEnabled: false,
+            }}
+            viewContainerStyle={styles.player}
+            webViewStyle={styles.player}
+          />
+        </View>
       ) : null}
 
       {!isReady && !error ? (
@@ -121,6 +141,11 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#000000',
+  },
+  playerStage: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   player: {
     backgroundColor: '#000000',
