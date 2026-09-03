@@ -5,6 +5,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
+  StyleSheet,
   useWindowDimensions,
   View,
   ViewabilityConfig,
@@ -20,7 +21,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimeBannerText from '~/components/home/AnimeBannerText';
 import ContinueWatchingRow from '~/components/home/ContinueWatchingRow';
-import Gradient from '~/components/home/Gradient';
 import HomeBanner from '~/components/home/HomeBanner';
 import HomeButtons from '~/components/home/HomeButtons';
 import RowItem from '~/components/home/RowItem';
@@ -157,12 +157,15 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
         scrollEventThrottle={16}>
-        {activeAnime ? (
-          <HomeBanner item={activeAnime} onPress={() => openDetails(activeAnime)} />
-        ) : null}
-        <Gradient />
 
-        <View className="flex flex-col">
+        {/* ── Hero Banner Block ─────────────────────────────────── */}
+        <View style={{ position: 'relative' }}>
+          {/* Background poster image with built-in gradients */}
+          {activeAnime ? (
+            <HomeBanner item={activeAnime} onPress={() => openDetails(activeAnime)} />
+          ) : null}
+
+          {/* Animated text overlay (absolutely on top of the image) */}
           <Animated.FlatList
             bounces={false}
             data={loopedSpotlight}
@@ -179,7 +182,7 @@ const Home = () => {
             removeClippedSubviews
             scrollEventThrottle={16}
             showsHorizontalScrollIndicator={false}
-            style={{ flexGrow: 0 }}
+            style={[StyleSheet.absoluteFill, { flexGrow: 0 }]}
             viewabilityConfigCallbackPairs={bannerViewabilityPairs.current}
             windowSize={5}
             renderItem={({ item, index }) => (
@@ -187,6 +190,27 @@ const Home = () => {
             )}
           />
 
+          {/* Pagination dots */}
+          {spotlightAnime.length > 1 && (
+            <View style={styles.dotsContainer}>
+              {spotlightAnime.map((_, i) => {
+                const dotActive = (activeIndex % spotlightAnime.length) === i;
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dot,
+                      dotActive ? styles.dotActive : styles.dotInactive,
+                    ]}
+                  />
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+        {/* ── Buttons & Content Rows ───────────────────────────── */}
+        <View className="flex flex-col">
           <HomeButtons anime={activeAnime} />
 
           <RowItem
@@ -230,3 +254,27 @@ const Home = () => {
 };
 
 export default Home;
+
+const styles = StyleSheet.create({
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 12,
+    right: 16,
+    flexDirection: 'row',
+    gap: 5,
+    alignItems: 'center',
+  },
+  dot: {
+    borderRadius: 99,
+  },
+  dotActive: {
+    width: 18,
+    height: 5,
+    backgroundColor: '#bef264',
+  },
+  dotInactive: {
+    width: 5,
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+});
