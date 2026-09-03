@@ -380,7 +380,7 @@ const AnimeDetails = () => {
               haptic="light"
               scaleTo={0.97}
               testID="detail-trailer-button">
-              <YoutubeLogo size={28} />
+              <YoutubeLogo size={28} color="#FF0000" />
               <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
             </ScalePressable>
           ) : null}
@@ -677,9 +677,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
     minHeight: 50,
     borderRadius: 15,
-    backgroundColor: '#1A1A1A',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: '#171212',
+    borderWidth: 1.2,
+    borderColor: 'rgba(255, 0, 0, 0.35)',
   },
   ytTrailerText: {
     color: '#FFFFFF',
