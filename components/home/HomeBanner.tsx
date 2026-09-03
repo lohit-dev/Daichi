@@ -12,29 +12,19 @@ type HomeBannerProps = {
 
 const HomeBanner = ({ item }: HomeBannerProps) => (
   <View style={styles.container} testID="home-hero-banner">
-    {/* Full-bleed hero image */}
     <Animated.Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
 
-    {/* Left-side vignette for text legibility */}
+    {/* Subtle top fade for status bar */}
     <LinearGradient
-      colors={['rgba(10,10,14,0.75)', 'transparent']}
-      start={{ x: 0, y: 0.5 }}
-      end={{ x: 0.6, y: 0.5 }}
-      style={StyleSheet.absoluteFill}
-      pointerEvents="none"
-    />
-
-    {/* Top status-bar fade */}
-    <LinearGradient
-      colors={['rgba(10,10,14,0.9)', 'transparent']}
+      colors={['rgba(10,10,14,0.6)', 'transparent']}
       style={styles.topFade}
       pointerEvents="none"
     />
 
-    {/* Strong bottom content fade — text & buttons sit here */}
+    {/* Strong bottom fade — image dissolves cleanly into dark bg */}
     <LinearGradient
-      colors={['transparent', 'rgba(10,10,14,0.6)', 'rgba(10,10,14,1)']}
-      locations={[0, 0.5, 1]}
+      colors={['transparent', 'rgba(10,10,14,0.35)', 'rgba(10,10,14,0.82)', 'rgba(10,10,14,1)']}
+      locations={[0, 0.42, 0.72, 1]}
       style={styles.bottomFade}
       pointerEvents="none"
     />
@@ -46,24 +36,24 @@ export default HomeBanner;
 const styles = StyleSheet.create({
   container: {
     width: wp(100),
-    height: hp(62),
+    height: hp(58),
   },
   image: {
     width: wp(100),
-    height: hp(62),
+    height: hp(58),
   },
   topFade: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
-    height: 90,
+    height: 80,
   },
   bottomFade: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    height: hp(30),
+    height: hp(32),
   },
 });
