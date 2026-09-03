@@ -1,3 +1,4 @@
+import { Star1 } from 'iconsax-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -37,6 +38,62 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
     return { opacity: opacityAnim, transform: [{ translateY: translateYAnim }] };
   });
 
+  const infoItems: { key: string; element: React.ReactNode }[] = [];
+
+  if (item.type || item.quality) {
+    infoItems.push({
+      key: 'type',
+      element: (
+        <Text className="font-salsa text-base font-semibold text-lime-300">
+          {item.type || item.quality}
+        </Text>
+      ),
+    });
+  }
+
+  if (item.rating && item.rating !== 'N/A') {
+    infoItems.push({
+      key: 'rating',
+      element: (
+        <View className="flex-row items-center gap-1">
+          <Star1 size={13} color="#bef264" variant="Bold" />
+          <Text className="font-salsa text-base font-semibold text-lime-300">{item.rating}</Text>
+        </View>
+      ),
+    });
+  }
+
+  if (item.episodeNumber || item.episode) {
+    infoItems.push({
+      key: 'episode',
+      element: (
+        <Text className="font-salsa text-base font-semibold text-gray-300">
+          {item.episodeNumber ? `${item.episodeNumber} Eps` : item.episode}
+        </Text>
+      ),
+    });
+  }
+
+  if (item.date) {
+    infoItems.push({
+      key: 'date',
+      element: (
+        <Text className="font-salsa text-base font-semibold text-gray-300">{item.date}</Text>
+      ),
+    });
+  }
+
+  if (item.genres && item.genres.length > 0) {
+    infoItems.push({
+      key: 'genres',
+      element: (
+        <Text className="font-salsa text-base font-semibold text-gray-300">
+          {item.genres.slice(0, 2).join(', ')}
+        </Text>
+      ),
+    });
+  }
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, animatedStyle]}>
@@ -48,15 +105,12 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
             {getFormattedTitle(item.title || '', 'text-4xl font-salsa')}
           </Text>
 
-          <View className="flex-row flex-wrap items-center justify-center px-12 pt-1">
-            {[item.type || item.quality, item.date].filter(Boolean).map((info, i, arr) => (
-              <React.Fragment key={i}>
-                <Text
-                  className={`font-salsa text-base font-semibold text-gray-300 ${i === 0 ? 'text-lg text-lime-300' : ''}`}>
-                  {info}
-                </Text>
-                {i < arr.length - 1 && (
-                  <Text className="font-salsa text-2xl text-lime-300"> • </Text>
+          <View className="flex-row flex-wrap items-center justify-center px-8 pt-1">
+            {infoItems.map((info, i) => (
+              <React.Fragment key={info.key}>
+                {info.element}
+                {i < infoItems.length - 1 && (
+                  <Text className="font-salsa text-xl text-lime-300"> • </Text>
                 )}
               </React.Fragment>
             ))}
