@@ -1,5 +1,6 @@
+import LottieView from 'lottie-react-native';
 import { useCallback } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 import AnimeCard from './AnimeCard';
 
@@ -29,8 +30,13 @@ export default function AnimeGrid({
   const ListFooter = useCallback(
     () =>
       isFetchingNextPage ? (
-        <View className="items-center py-5">
-          <ActivityIndicator size="small" color="#a3e635" />
+        <View className="items-center py-4">
+          <LottieView
+            source={require('~/assets/lottie/loading.json')}
+            autoPlay
+            loop
+            style={{ width: 44, height: 44 }}
+          />
         </View>
       ) : null,
     [isFetchingNextPage]

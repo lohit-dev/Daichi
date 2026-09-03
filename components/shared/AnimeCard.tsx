@@ -30,6 +30,17 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
       router.push({ pathname: '/anime/[id]', params: { id: item.slug, poster: item.image } });
     };
 
+    const hasValidRating = Boolean(
+      item.rating &&
+      item.rating !== 'N/A' &&
+      item.rating !== '0' &&
+      item.rating !== '0.0' &&
+      !isNaN(Number(item.rating)) &&
+      Number(item.rating) > 0
+    );
+
+    const formatLabel = item.type || item.quality || 'TV';
+
     return (
       <Animated.View
         entering={FadeInDown.delay(Math.min(index, MAX_STAGGER_ITEMS) * STAGGER_DELAY_MS).duration(
@@ -51,14 +62,16 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
               {detailsEnabled && (
                 <View className="flex-1 items-end justify-start p-2">
                   <View className="flex-row items-center justify-center rounded-full bg-lime-200 px-2 py-[2px]">
-                    {item.rating ? (
+                    {hasValidRating ? (
                       <View className="flex-row items-center gap-1">
                         <Star1 variant="Bold" size={12} color="#000" />
-                        <Text className="font-salsa text-black">{item.rating}</Text>
+                        <Text className="font-salsa text-xs font-semibold text-black">
+                          {item.rating}
+                        </Text>
                       </View>
                     ) : (
-                      <Text className="font-salsa font-bold text-black">
-                        {item.type || 'Anime'}
+                      <Text className="font-salsa text-xs font-semibold text-black">
+                        {formatLabel}
                       </Text>
                     )}
                   </View>

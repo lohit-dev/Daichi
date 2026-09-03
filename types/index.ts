@@ -64,6 +64,11 @@ export type AniListAnimeDetails = {
   malRating: string;
   aniListId: number | null;
   malId: number | null;
+  trailer?: {
+    id: string;
+    site?: string;
+  };
+  studios?: string[];
 };
 
 export type CharacterVoiceActor = {

@@ -41,6 +41,13 @@
             "useExoplayerDash": true
           }
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Daichi to access your photos.",
+          "savePhotosPermission": "Allow Daichi to save photos."
+        }
       ]
     ],
     "experiments": {
@@ -58,7 +65,9 @@
         "UIStatusBarHidden": false,
         "UIViewControllerBasedStatusBarAppearance": false,
         "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": ["audio"],
+        "NSPhotoLibraryUsageDescription": "Allow Daichi to access your photos.",
+        "NSPhotoLibraryAddUsageDescription": "Allow Daichi to save photos."
       }
     },
     "android": {

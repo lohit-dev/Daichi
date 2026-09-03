@@ -14,6 +14,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  Pressable,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -29,8 +30,11 @@ import { useToast } from 'react-native-toast-notifications';
 import { useSavedAnimesStore } from '~/app/_store/useSavedAnimesStore';
 import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow';
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
+import ImagePreviewModal from '~/components/details/ImagePreviewModal';
 import RowItem from '~/components/home/RowItem';
 import ScalePressable from '~/components/shared/ScalePressable';
+import YoutubeLogo from '~/components/shared/YoutubeLogo';
+import { darkTheme } from '~/constants/Colors';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { hp, wp } from '~/helpers/common';
 import { fetchAniListAnimeById, fetchAniListAnimeExtras } from '~/services/AniListService';
@@ -82,6 +86,7 @@ const AnimeDetails = () => {
   });
 
   const [isFav, setIsFav] = useState(() => savedAnimes.some((anime) => anime.slug === id));
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const isUpcoming = animeData?.status?.toLowerCase().includes('not yet aired');
   const canWatch = !isUpcoming;
   const bannerImage = animeData?.bannerImage || animeExtras?.bannerImage;
@@ -171,6 +176,25 @@ const AnimeDetails = () => {
     });
   }, [addAnime, animeData, isFav, removeAnime, toast]);
 
+  const handlePlayTrailer = useCallback(() => {
+    const trailerId = animeData?.trailer?.id;
+    if (!trailerId) {
+      toast.show('A trailer is not available for this title yet.', {
+        type: 'normal',
+        placement: 'bottom',
+      });
+      return;
+    }
+
+    nav.push({
+      pathname: '/trailer/[videoId]',
+      params: {
+        videoId: trailerId,
+        title: animeData.title,
+      },
+    });
+  }, [animeData, nav, toast]);
+
   useFocusEffect(
     useCallback(() => {
       const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -230,12 +254,17 @@ const AnimeDetails = () => {
         showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {bannerImage ? (
-            <Animated.Image
-              fadeDuration={0}
-              resizeMode="cover"
-              source={{ uri: bannerImage }}
-              style={[styles.heroImage, { width: width + heroPanDistance }, heroPanStyle]}
-            />
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setPreviewImage(bannerImage || animeData.image)}
+              accessibilityLabel="View full banner image">
+              <Animated.Image
+                fadeDuration={0}
+                resizeMode="cover"
+                source={{ uri: bannerImage }}
+                style={[styles.heroImage, { width: width + heroPanDistance }, heroPanStyle]}
+              />
+            </Pressable>
           ) : null}
           <LinearGradient
             colors={['rgba(4, 5, 4, 0.12)', 'rgba(4, 5, 4, 0.4)', '#0a0a0a']}
@@ -243,6 +272,7 @@ const AnimeDetails = () => {
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
 
           <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
@@ -290,7 +320,13 @@ const AnimeDetails = () => {
         </View>
 
         <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.titleBlock}>
-          <Animated.Image source={{ uri: animeData.image }} style={styles.poster} />
+          <ScalePressable
+            onPress={() => setPreviewImage(animeData.image)}
+            scaleTo={0.95}
+            haptic="light"
+            accessibilityLabel="View full poster">
+            <Animated.Image source={{ uri: animeData.image }} style={styles.poster} />
+          </ScalePressable>
           <View style={styles.titleCopy}>
             <Text style={styles.kicker} numberOfLines={1}>
               {animeData.released || 'Release date unavailable'}
@@ -353,6 +389,18 @@ const AnimeDetails = () => {
             </ScalePressable>
           </View>
 
+          {animeData.trailer?.id ? (
+            <ScalePressable
+              onPress={handlePlayTrailer}
+              style={styles.ytTrailerButton}
+              haptic="light"
+              scaleTo={0.97}
+              testID="detail-trailer-button">
+              <YoutubeLogo size={28} color={darkTheme.colors.onTertiaryContainer} />
+              <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
+            </ScalePressable>
+          ) : null}
+
           {!canWatch ? (
             <Text style={styles.upcomingNotice}>
               Episodes will appear here once this title starts airing.
@@ -383,11 +431,13 @@ const AnimeDetails = () => {
             <DetailLine
               label="Studio"
               value={
-                animeExtras?.studios.length
-                  ? animeExtras.studios.join(' • ')
-                  : isExtrasLoading
-                    ? 'Loading…'
-                    : undefined
+                animeData.studios?.length
+                  ? animeData.studios.join(' • ')
+                  : animeExtras?.studios.length
+                    ? animeExtras.studios.join(' • ')
+                    : isExtrasLoading
+                      ? 'Loading…'
+                      : undefined
               }
             />
             <DetailLine label="Genres" value={animeData.genres?.join(' • ')} accent />
@@ -398,7 +448,7 @@ const AnimeDetails = () => {
             <CharacterVoiceActorRow
               data={animeExtras.cast}
               animeId={animeData.id}
-              className="mt-6"
+              className="mt-2"
               seeAll
             />
           ) : null}
@@ -441,6 +491,13 @@ const AnimeDetails = () => {
           })
         }
         type={selectedType}
+      />
+
+      <ImagePreviewModal
+        visible={Boolean(previewImage)}
+        imageUrl={previewImage ?? undefined}
+        title={animeData.title}
+        onClose={() => setPreviewImage(null)}
       />
     </View>
   );
@@ -635,6 +692,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  ytTrailerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    minHeight: 50,
+    borderRadius: 15,
+    backgroundColor: darkTheme.colors.tertiaryContainer,
+  },
+  ytTrailerText: {
+    color: darkTheme.colors.onTertiaryContainer,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   upcomingNotice: {
     marginTop: 10,
     color: 'rgba(255,255,255,0.52)',
@@ -671,7 +744,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   infoPanel: {
-    marginTop: 29,
+    marginTop: 19,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.16)',
