@@ -193,6 +193,7 @@ const Home = () => {
             category="popular"
             data={homePageData?.data?.topTables?.newlyAdded}
             rounded
+            className="-mt-3"
           />
           <ContinueWatchingRow />
           <RowItem

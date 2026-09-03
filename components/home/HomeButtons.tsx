@@ -57,7 +57,7 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
   };
 
   return (
-    <View className="flex-row justify-center gap-4 px-10 pb-2 pt-2">
+    <View className="flex-row justify-center gap-4 px-10 pb-0 pt-2">
       <ScalePressable
         className="flex-1 flex-row items-center justify-center gap-2 space-x-2 rounded-3xl bg-lime-300 py-3"
         disabled={!anime}
