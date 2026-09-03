@@ -106,10 +106,11 @@ const Home = () => {
   }, [bannerRef, homePageData, width, x]);
 
   const handleBannerMomentumEnd = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    (event?: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!spotlightAnime.length || width <= 0) return;
 
-      const visibleIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+      const offsetX = event?.nativeEvent?.contentOffset?.x ?? x.value;
+      const visibleIndex = Math.round(offsetX / width);
       let nextIndex = visibleIndex;
 
       if (spotlightAnime.length > 1) {
@@ -133,6 +134,10 @@ const Home = () => {
     },
     [bannerRef, spotlightAnime.length, width, x]
   );
+
+  const handleScrollAnimationEnd = useCallback(() => {
+    handleBannerMomentumEnd();
+  }, [handleBannerMomentumEnd]);
 
   useEffect(() => {
     if (!isAutoPlay || spotlightAnime.length < 2) return;
@@ -168,6 +173,7 @@ const Home = () => {
             keyExtractor={(item, index) => `spotlight-${item.slug}-${index}`}
             maxToRenderPerBatch={5}
             onMomentumScrollEnd={handleBannerMomentumEnd}
+            onScrollAnimationEnd={handleScrollAnimationEnd}
             onScroll={onScroll}
             onScrollBeginDrag={() => setIsAutoPlay(false)}
             pagingEnabled
@@ -178,7 +184,16 @@ const Home = () => {
             style={{ height: hp(50) }}
             viewabilityConfigCallbackPairs={bannerViewabilityPairs.current}
             windowSize={5}
-            renderItem={({ item }) => <HomeBanner item={item} onPress={() => openDetails(item)} />}
+            renderItem={({ item, index }) => (
+              <HomeBanner
+                item={item}
+                index={index}
+                isActive={activeIndex === index}
+                x={x}
+                screenWidth={width}
+                onPress={() => openDetails(item)}
+              />
+            )}
           />
 
           <HomeButtons anime={activeAnime} />

@@ -32,6 +32,7 @@ import EpisodeListSheet from '~/components/details/EpisodeListSheet';
 import RowItem from '~/components/home/RowItem';
 import ScalePressable from '~/components/shared/ScalePressable';
 import YoutubeLogo from '~/components/shared/YoutubeLogo';
+import { darkTheme } from '~/constants/Colors';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { hp, wp } from '~/helpers/common';
 import { fetchAniListAnimeById, fetchAniListAnimeExtras } from '~/services/AniListService';
@@ -380,7 +381,7 @@ const AnimeDetails = () => {
               haptic="light"
               scaleTo={0.97}
               testID="detail-trailer-button">
-              <YoutubeLogo size={28} color="#FF0000" />
+              <YoutubeLogo size={28} color={darkTheme.colors.onTertiaryContainer} />
               <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
             </ScalePressable>
           ) : null}
@@ -677,10 +678,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
     minHeight: 50,
     borderRadius: 15,
-    backgroundColor: '#171212',
+    backgroundColor: darkTheme.colors.tertiaryContainer,
   },
   ytTrailerText: {
-    color: '#FFFFFF',
+    color: darkTheme.colors.onTertiaryContainer,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.2,

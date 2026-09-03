@@ -48,7 +48,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
         </View>
         <Text
           className="pt-1 text-center font-salsa text-sm text-white"
-          numberOfLines={2}
+          numberOfLines={1}
           ellipsizeMode="tail">
           {getFormattedTitle(item.name)}
         </Text>
@@ -59,7 +59,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
 
       {item.voiceActor ? (
         <View style={styles.swapIconContainer}>
-          <ArrowSwapVertical size="20" color="#a3e635" />
+          <ArrowSwapVertical size="16" color="#a3e635" />
         </View>
       ) : null}
 
@@ -84,7 +84,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
           </View>
           <Text
             className="pt-1 text-center font-salsa text-sm text-white"
-            numberOfLines={2}
+            numberOfLines={1}
             ellipsizeMode="tail">
             {getFormattedTitle(item.voiceActor.name)}
           </Text>
@@ -144,9 +144,9 @@ export default CharacterVoiceActorRow;
 
 const styles = StyleSheet.create({
   columnContainer: {
-    width: wp(28),
+    width: wp(29),
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
   itemBlock: {
     width: '100%',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     height: wp(20),
   },
   swapIconContainer: {
-    paddingVertical: 6,
+    paddingVertical: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },

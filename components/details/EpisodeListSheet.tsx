@@ -1,5 +1,5 @@
 import { BottomSheetModal, BottomSheetFlatList } from '@gorhom/bottom-sheet';
-import { ArrowDown2, ArrowUp2, SearchNormal1 } from 'iconsax-react-native';
+import { ArrowDown2, ArrowUp2, CloseCircle, SearchNormal1 } from 'iconsax-react-native';
 import { useCallback, useMemo, useRef, useState, RefObject } from 'react';
 import { View, Text, ActivityIndicator, TextInput, StyleSheet } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -146,29 +146,32 @@ const EpisodeListSheet = ({
         </View>
 
         {/* Search + Sort */}
-        <View className="flex-row items-center gap-[10px] px-4 py-3">
-          <View className="flex-1 flex-row items-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.06] px-3 py-[10px]">
-            <SearchNormal1 size={18} color="#a3e635" />
+        <View className="flex-row items-center gap-[10px] px-4 py-2.5">
+          <View style={styles.searchBar}>
+            <SearchNormal1 size={18} color="#bef264" />
             <TextInput
               style={styles.searchInput}
               placeholder="Search episodes..."
-              placeholderTextColor="#555"
+              placeholderTextColor="rgba(255, 255, 255, 0.4)"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
+            {searchQuery ? (
+              <ScalePressable onPress={() => setSearchQuery('')} haptic="light" scaleTo={0.88}>
+                <CloseCircle size={16} color="rgba(255, 255, 255, 0.45)" variant="Bold" />
+              </ScalePressable>
+            ) : null}
           </View>
           <ScalePressable
             onPress={() => setSortOrder((c) => (c === 'asc' ? 'desc' : 'asc'))}
             scaleTo={0.94}
-            className="flex-row items-center gap-[5px] rounded-[14px] border border-lime-400/25 bg-white/[0.06] px-[14px] py-[10px]">
+            style={styles.sortButton}>
             {sortOrder === 'asc' ? (
-              <ArrowDown2 size={18} color="#a3e635" />
+              <ArrowDown2 size={16} color="#bef264" />
             ) : (
-              <ArrowUp2 size={18} color="#a3e635" />
+              <ArrowUp2 size={16} color="#bef264" />
             )}
-            <Text className="text-[13px] font-bold text-lime-400">
-              {sortOrder === 'asc' ? 'ASC' : 'DESC'}
-            </Text>
+            <Text style={styles.sortButtonText}>{sortOrder === 'asc' ? 'ASC' : 'DESC'}</Text>
           </ScalePressable>
         </View>
 
@@ -224,6 +227,40 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   sheetTitle: { color: '#ffffff', fontFamily: 'Salsa-Regular', fontSize: 22, fontWeight: '700' },
-  searchInput: { flex: 1, color: '#ffffff', fontSize: 14 },
+  searchBar: {
+    flex: 1,
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 12,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    paddingVertical: 0,
+    color: '#ffffff',
+    fontSize: 14,
+  },
+  sortButton: {
+    height: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(190, 242, 100, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 14,
+  },
+  sortButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#bef264',
+  },
   listContent: { paddingVertical: 10, paddingHorizontal: 14, gap: 10 },
 });
