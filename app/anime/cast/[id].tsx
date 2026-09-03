@@ -2,7 +2,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, ArrowRight2 } from 'iconsax-react-native';
 import { useCallback } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import LottieView from 'lottie-react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -90,15 +91,23 @@ export default function CastScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const { data, error, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useInfiniteQuery({
-      queryKey: ['anilist', 'anime-cast', id],
-      queryFn: ({ pageParam }) => fetchAniListAnimeCastPage(id, pageParam),
-      initialPageParam: 1,
-      getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.currentPage + 1 : undefined),
-      enabled: Boolean(id),
-      staleTime: 15 * 60 * 1000,
-    });
+  const {
+    data,
+    error,
+    isLoading,
+    isFetching,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['anilist', 'anime-cast', id],
+    queryFn: ({ pageParam }) => fetchAniListAnimeCastPage(id, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.currentPage + 1 : undefined),
+    enabled: Boolean(id),
+    staleTime: 15 * 60 * 1000,
+  });
 
   const renderItem = useCallback(
     ({ item, index }: { item: CharacterVoiceActor; index: number }) => (
@@ -107,7 +116,7 @@ export default function CastScreen() {
     []
   );
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading || (isFetching && !data)) return <LoadingScreen />;
 
   if (error) {
     return <ErrorScreen message="Unable to load the cast." onRetry={() => refetch()} />;
@@ -157,7 +166,14 @@ export default function CastScreen() {
           onEndReachedThreshold={0.6}
           ListFooterComponent={
             isFetchingNextPage ? (
-              <ActivityIndicator color="#a3e635" style={styles.footerLoader} />
+              <View className="items-center py-4">
+                <LottieView
+                  source={require('~/assets/lottie/loading.json')}
+                  autoPlay
+                  loop
+                  style={{ width: 44, height: 44 }}
+                />
+              </View>
             ) : null
           }
         />

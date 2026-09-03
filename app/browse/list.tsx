@@ -1,10 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimeGrid from '~/components/shared/AnimeGrid';
+import ErrorScreen from '~/components/shared/ErrorScreen';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import ScreenHeader from '~/components/shared/ScreenHeader';
 import { fetchAniListDubbedPage, fetchAniListSubbedPage } from '~/services/AniListService';
 import { Anime } from '~/types';
@@ -23,6 +24,7 @@ export default function StaticListScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetching,
   } = useInfiniteQuery({
     queryKey: ['anilist', 'paged', source],
     queryFn: ({ pageParam = 1 }) =>
@@ -48,31 +50,25 @@ export default function StaticListScreen() {
 
   const displayTitle = title ? decodeURIComponent(title as string) : 'Anime';
 
+  if (isLoading || (source && isFetching && items.length === 0)) {
+    return <LoadingScreen />;
+  }
+
+  if (isError) {
+    return <ErrorScreen message="Unable to load this catalogue." />;
+  }
+
   return (
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-neutral-950">
       <ScreenHeader title={displayTitle} />
 
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#a3e635" />
-        </View>
-      ) : isError ? (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-base text-white/50">Unable to load this catalogue.</Text>
-        </View>
-      ) : items.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-base text-white/50">No titles found.</Text>
-        </View>
-      ) : (
-        <AnimeGrid
-          data={items}
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-          }}
-          isFetchingNextPage={isFetchingNextPage}
-        />
-      )}
+      <AnimeGrid
+        data={items}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+        }}
+        isFetchingNextPage={isFetchingNextPage}
+      />
     </SafeAreaView>
   );
 }

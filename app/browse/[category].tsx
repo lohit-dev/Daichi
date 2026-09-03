@@ -1,11 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AnimeGrid from '~/components/shared/AnimeGrid';
-import ScalePressable from '~/components/shared/ScalePressable';
+import ErrorScreen from '~/components/shared/ErrorScreen';
+import LoadingScreen from '~/components/shared/LoadingScreen';
 import ScreenHeader from '~/components/shared/ScreenHeader';
 import { fetchAniListBrowse, BrowseCategory } from '~/services/AniListService';
 import { Anime } from '~/types';
@@ -57,27 +57,16 @@ export default function BrowseScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-neutral-950">
-        <ActivityIndicator size="large" color="#a3e635" />
-      </View>
-    );
+  if (isLoading || (isFetching && items.length === 0)) {
+    return <LoadingScreen />;
   }
 
   if (isError) {
     return (
-      <View className="flex-1 items-center justify-center gap-4 bg-neutral-950">
-        <Text className="px-6 text-center text-[15px] text-white/70">
-          {error instanceof Error ? error.message : 'Something went wrong.'}
-        </Text>
-        <ScalePressable
-          onPress={() => refetch()}
-          className="rounded-xl bg-lime-200 px-6 py-3"
-          haptic="medium">
-          <Text className="text-[15px] font-bold text-[#182008]">Retry</Text>
-        </ScalePressable>
-      </View>
+      <ErrorScreen
+        message={error instanceof Error ? error.message : 'Something went wrong.'}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -90,16 +79,6 @@ export default function BrowseScreen() {
         onEndReached={handleEndReached}
         isFetchingNextPage={isFetchingNextPage}
       />
-
-      {/* Full-screen spinner while refetching an empty list — needs absoluteFill */}
-      {isFetching && !isFetchingNextPage && items.length === 0 && (
-        <View
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-          className="items-center justify-center">
-          <ActivityIndicator size="large" color="#a3e635" />
-        </View>
-      )}
     </SafeAreaView>
   );
 }

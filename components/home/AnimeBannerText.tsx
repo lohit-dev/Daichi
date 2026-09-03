@@ -21,20 +21,63 @@ type AnimeBannerTextProps = {
 const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
   const { width } = useWindowDimensions();
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateYAnim = interpolate(
+  // 1 & 2: Staggered Cascade + Depth Pop for Title
+  const titleAnimatedStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
       x.value,
       [(index - 1) * width, index * width, (index + 1) * width],
-      [-50, 0, 50],
+      [-100, 0, 100],
       Extrapolation.CLAMP
     );
-    const opacityAnim = interpolate(
+
+    const opacity = interpolate(
       x.value,
       [(index - 1) * width, index * width, (index + 1) * width],
-      [-4, 1, -4],
+      [-5, 1, -5],
       Extrapolation.CLAMP
     );
-    return { opacity: opacityAnim, transform: [{ translateY: translateYAnim }] };
+
+    // Subtle depth pop (expand into focus)
+    const scale = interpolate(
+      x.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0.95, 1, 0.95],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ translateY }, { scale }],
+    };
+  });
+
+  // 1 & 2: Staggered Cascade + Depth Pop for Metadata (softer travel, follows behind title)
+  const metaAnimatedStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      x.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [-55, 0, 55],
+      Extrapolation.CLAMP
+    );
+
+    const opacity = interpolate(
+      x.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [-4.5, 1, -4.5],
+      Extrapolation.CLAMP
+    );
+
+    const scale = interpolate(
+      x.value,
+      [(index - 1) * width, index * width, (index + 1) * width],
+      [0.96, 1, 0.96],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      transform: [{ translateY }, { scale }],
+    };
   });
 
   const infoItems: { key: string; element: React.ReactNode }[] = [];
@@ -72,16 +115,19 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.content, animatedStyle]}>
+      <View style={styles.content}>
         <Pressable onPress={onPress} className="w-full items-center">
-          <Text
+          <Animated.Text
+            style={titleAnimatedStyle}
             className="px-3 pt-1 text-center font-salsa text-3xl font-semibold leading-[35px] text-white"
             numberOfLines={2}
             ellipsizeMode="tail">
             {getFormattedTitle(item.title || '', 'text-3xl font-salsa')}
-          </Text>
+          </Animated.Text>
 
-          <View className="flex-row flex-wrap items-center justify-center px-8 pt-1">
+          <Animated.View
+            style={metaAnimatedStyle}
+            className="flex-row flex-wrap items-center justify-center px-8 pt-1">
             {infoItems.map((info, i) => (
               <React.Fragment key={info.key}>
                 {info.element}
@@ -90,9 +136,9 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
                 )}
               </React.Fragment>
             ))}
-          </View>
+          </Animated.View>
         </Pressable>
-      </Animated.View>
+      </View>
     </View>
   );
 };
@@ -100,7 +146,7 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
 export default AnimeBannerText;
 
 const styles = StyleSheet.create({
-  container: { width: wp(100), height: hp(49) },
+  container: { width: wp(100), height: hp(50) },
   content: {
     position: 'absolute',
     bottom: 4,

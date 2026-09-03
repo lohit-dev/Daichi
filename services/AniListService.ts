@@ -321,7 +321,7 @@ const mapAnime = (media: RawMedia, rank?: number): Anime => ({
     : undefined,
   synopsis: cleanHtml(media.description),
   quality: formatIdToTitle(media.format) || 'Anime',
-  rating: media.averageScore ? `${(media.averageScore / 10).toFixed(1)}` : 'N/A',
+  rating: media.averageScore ? `${(media.averageScore / 10).toFixed(1)}` : undefined,
   date: seasonOf(media) || 'TBA',
   type: formatIdToTitle(media.format) || 'Anime',
   episode: media.episodes ? `${media.episodes} Episodes` : undefined,

@@ -18,7 +18,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AnimeBannerText from '~/components/home/AnimeBannerText';
 import ContinueWatchingRow from '~/components/home/ContinueWatchingRow';
+import Gradient from '~/components/home/Gradient';
 import HomeBanner from '~/components/home/HomeBanner';
 import HomeButtons from '~/components/home/HomeButtons';
 import RowItem from '~/components/home/RowItem';
@@ -42,6 +44,7 @@ const Home = () => {
   });
 
   const [spotlightAnime, setSpotlightAnime] = useState<Anime[]>([]);
+  const [carouselData, setCarouselData] = useState<Anime[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
 
@@ -56,23 +59,18 @@ const Home = () => {
         const visibleIndex = viewableItems.find((item) => item.isViewable)?.index;
         if (visibleIndex !== null && visibleIndex !== undefined) {
           setActiveIndex(visibleIndex);
+          setCarouselData((prev) => {
+            if (visibleIndex >= prev.length - 3 && spotlightAnime.length > 0) {
+              return [...prev, ...spotlightAnime];
+            }
+            return prev;
+          });
         }
       },
     },
   ]);
 
-  // Three copies create a continuous window in both directions. We always
-  // re-centre onto the same item after settling at either outer copy, so the
-  // reposition itself is invisible to the user.
-  const loopedSpotlight = useMemo(
-    () =>
-      spotlightAnime.length > 1
-        ? [...spotlightAnime, ...spotlightAnime, ...spotlightAnime]
-        : spotlightAnime,
-    [spotlightAnime]
-  );
-
-  const activeAnime = loopedSpotlight[activeIndex] ?? spotlightAnime[0];
+  const activeAnime = carouselData[activeIndex] ?? spotlightAnime[0];
 
   const openDetails = useCallback((anime: Anime) => {
     router.push({
@@ -89,50 +87,34 @@ const Home = () => {
 
   useEffect(() => {
     const spotlight = homePageData?.data?.spotlight ?? [];
-    const startIndex = spotlight.length > 1 ? spotlight.length : 0;
-
     setSpotlightAnime(spotlight);
-    setActiveIndex(startIndex);
-
-    if (spotlight.length > 1) {
-      x.value = startIndex * width;
-      requestAnimationFrame(() => {
-        bannerRef.current?.scrollToOffset({
-          offset: startIndex * width,
-          animated: false,
-        });
-      });
+    if (spotlight.length > 0) {
+      // Initialize with 3 sets for smooth forward runway
+      setCarouselData([...spotlight, ...spotlight, ...spotlight]);
+    } else {
+      setCarouselData([]);
     }
-  }, [bannerRef, homePageData, width, x]);
+    setActiveIndex(0);
+    x.value = 0;
+  }, [homePageData, x]);
 
   const handleBannerMomentumEnd = useCallback(
     (event?: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (!spotlightAnime.length || width <= 0) return;
+      if (!carouselData.length || width <= 0) return;
 
       const offsetX = event?.nativeEvent?.contentOffset?.x ?? x.value;
-      const visibleIndex = Math.round(offsetX / width);
-      let nextIndex = visibleIndex;
+      const visibleIndex = Math.max(0, Math.round(offsetX / width));
 
-      if (spotlightAnime.length > 1) {
-        if (visibleIndex < spotlightAnime.length) {
-          nextIndex = visibleIndex + spotlightAnime.length;
-        } else if (visibleIndex >= spotlightAnime.length * 2) {
-          nextIndex = visibleIndex - spotlightAnime.length;
+      setActiveIndex(visibleIndex);
+      setCarouselData((prev) => {
+        if (visibleIndex >= prev.length - 3 && spotlightAnime.length > 0) {
+          return [...prev, ...spotlightAnime];
         }
-
-        if (nextIndex !== visibleIndex) {
-          x.value = nextIndex * width;
-          bannerRef.current?.scrollToOffset({
-            offset: nextIndex * width,
-            animated: false,
-          });
-        }
-      }
-
-      setActiveIndex(nextIndex);
+        return prev;
+      });
       setIsAutoPlay(true);
     },
-    [bannerRef, spotlightAnime.length, width, x]
+    [carouselData.length, spotlightAnime, width, x]
   );
 
   const handleScrollAnimationEnd = useCallback(() => {
@@ -140,7 +122,7 @@ const Home = () => {
   }, [handleBannerMomentumEnd]);
 
   useEffect(() => {
-    if (!isAutoPlay || spotlightAnime.length < 2) return;
+    if (!isAutoPlay || carouselData.length < 2) return;
 
     autoplayRef.current = setInterval(() => {
       const nextIndex = activeIndex + 1;
@@ -150,7 +132,7 @@ const Home = () => {
     return () => {
       if (autoplayRef.current) clearInterval(autoplayRef.current);
     };
-  }, [activeIndex, bannerRef, isAutoPlay, spotlightAnime.length, width]);
+  }, [activeIndex, bannerRef, carouselData.length, isAutoPlay, width]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -163,10 +145,15 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
         scrollEventThrottle={16}>
+        {activeAnime ? (
+          <HomeBanner item={activeAnime} onPress={() => openDetails(activeAnime)} />
+        ) : null}
+        <Gradient />
+
         <View className="flex flex-col">
           <Animated.FlatList
             bounces={false}
-            data={loopedSpotlight}
+            data={carouselData}
             getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
             horizontal
             initialNumToRender={5}
@@ -185,14 +172,7 @@ const Home = () => {
             viewabilityConfigCallbackPairs={bannerViewabilityPairs.current}
             windowSize={5}
             renderItem={({ item, index }) => (
-              <HomeBanner
-                item={item}
-                index={index}
-                isActive={activeIndex === index}
-                x={x}
-                screenWidth={width}
-                onPress={() => openDetails(item)}
-              />
+              <AnimeBannerText item={item} index={index} x={x} onPress={() => openDetails(item)} />
             )}
           />
 

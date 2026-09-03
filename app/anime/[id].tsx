@@ -29,6 +29,7 @@ import { useToast } from 'react-native-toast-notifications';
 import { useSavedAnimesStore } from '~/app/_store/useSavedAnimesStore';
 import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow';
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
+import ImagePreviewModal from '~/components/details/ImagePreviewModal';
 import RowItem from '~/components/home/RowItem';
 import ScalePressable from '~/components/shared/ScalePressable';
 import YoutubeLogo from '~/components/shared/YoutubeLogo';
@@ -84,6 +85,7 @@ const AnimeDetails = () => {
   });
 
   const [isFav, setIsFav] = useState(() => savedAnimes.some((anime) => anime.slug === id));
+  const [isPosterModalVisible, setIsPosterModalVisible] = useState(false);
   const isUpcoming = animeData?.status?.toLowerCase().includes('not yet aired');
   const canWatch = !isUpcoming;
   const bannerImage = animeData?.bannerImage || animeExtras?.bannerImage;
@@ -311,7 +313,13 @@ const AnimeDetails = () => {
         </View>
 
         <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.titleBlock}>
-          <Animated.Image source={{ uri: animeData.image }} style={styles.poster} />
+          <ScalePressable
+            onPress={() => setIsPosterModalVisible(true)}
+            scaleTo={0.95}
+            haptic="light"
+            accessibilityLabel="View full poster">
+            <Animated.Image source={{ uri: animeData.image }} style={styles.poster} />
+          </ScalePressable>
           <View style={styles.titleCopy}>
             <Text style={styles.kicker} numberOfLines={1}>
               {animeData.released || 'Release date unavailable'}
@@ -476,6 +484,13 @@ const AnimeDetails = () => {
           })
         }
         type={selectedType}
+      />
+
+      <ImagePreviewModal
+        visible={isPosterModalVisible}
+        imageUrl={animeData.image}
+        title={animeData.title}
+        onClose={() => setIsPosterModalVisible(false)}
       />
     </View>
   );
