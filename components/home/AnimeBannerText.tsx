@@ -75,7 +75,7 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
       <Animated.View style={[styles.content, animatedStyle]}>
         <Pressable onPress={onPress} className="w-full items-center">
           <Text
-            className="px-2 pt-1 text-center font-salsa text-3xl font-semibold text-white"
+            className="px-7 pt-1 text-center font-salsa text-3xl font-semibold leading-[35px] text-white"
             numberOfLines={2}
             ellipsizeMode="tail">
             {getFormattedTitle(item.title || '', 'text-4xl font-salsa')}

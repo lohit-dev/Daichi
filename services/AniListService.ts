@@ -359,6 +359,13 @@ const mapDetails = (media: RawMedia): AniListAnimeDetails => {
     malRating: media.averageScore ? `${media.averageScore}%` : 'N/A',
     aniListId: media.id,
     malId: media.idMal ?? null,
+    trailer: media.trailer?.id
+      ? { id: media.trailer.id, site: media.trailer.site || undefined }
+      : undefined,
+    studios:
+      media.studios?.nodes
+        ?.map((node) => node?.name)
+        .filter((name): name is string => Boolean(name)) ?? [],
   };
 };
 

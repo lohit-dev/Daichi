@@ -31,6 +31,7 @@ import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow'
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
 import RowItem from '~/components/home/RowItem';
 import ScalePressable from '~/components/shared/ScalePressable';
+import YoutubeLogo from '~/components/shared/YoutubeLogo';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { hp, wp } from '~/helpers/common';
 import { fetchAniListAnimeById, fetchAniListAnimeExtras } from '~/services/AniListService';
@@ -170,6 +171,25 @@ const AnimeDetails = () => {
       duration: 2000,
     });
   }, [addAnime, animeData, isFav, removeAnime, toast]);
+
+  const handlePlayTrailer = useCallback(() => {
+    const trailerId = animeData?.trailer?.id;
+    if (!trailerId) {
+      toast.show('A trailer is not available for this title yet.', {
+        type: 'normal',
+        placement: 'bottom',
+      });
+      return;
+    }
+
+    nav.push({
+      pathname: '/trailer/[videoId]',
+      params: {
+        videoId: trailerId,
+        title: animeData.title,
+      },
+    });
+  }, [animeData, nav, toast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -353,6 +373,18 @@ const AnimeDetails = () => {
             </ScalePressable>
           </View>
 
+          {animeData.trailer?.id ? (
+            <ScalePressable
+              onPress={handlePlayTrailer}
+              style={styles.ytTrailerButton}
+              haptic="light"
+              scaleTo={0.97}
+              testID="detail-trailer-button">
+              <YoutubeLogo size={28} />
+              <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
+            </ScalePressable>
+          ) : null}
+
           {!canWatch ? (
             <Text style={styles.upcomingNotice}>
               Episodes will appear here once this title starts airing.
@@ -383,11 +415,13 @@ const AnimeDetails = () => {
             <DetailLine
               label="Studio"
               value={
-                animeExtras?.studios.length
-                  ? animeExtras.studios.join(' • ')
-                  : isExtrasLoading
-                    ? 'Loading…'
-                    : undefined
+                animeData.studios?.length
+                  ? animeData.studios.join(' • ')
+                  : animeExtras?.studios.length
+                    ? animeExtras.studios.join(' • ')
+                    : isExtrasLoading
+                      ? 'Loading…'
+                      : undefined
               }
             />
             <DetailLine label="Genres" value={animeData.genres?.join(' • ')} accent />
@@ -398,7 +432,7 @@ const AnimeDetails = () => {
             <CharacterVoiceActorRow
               data={animeExtras.cast}
               animeId={animeData.id}
-              className="mt-6"
+              className="mt-2"
               seeAll
             />
           ) : null}
@@ -635,6 +669,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  ytTrailerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+    minHeight: 50,
+    borderRadius: 15,
+    backgroundColor: '#1A1A1A',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  ytTrailerText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   upcomingNotice: {
     marginTop: 10,
     color: 'rgba(255,255,255,0.52)',
@@ -671,7 +723,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   infoPanel: {
-    marginTop: 29,
+    marginTop: 19,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.16)',
