@@ -678,8 +678,6 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: 15,
     backgroundColor: '#171212',
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 0, 0, 0.35)',
   },
   ytTrailerText: {
     color: '#FFFFFF',

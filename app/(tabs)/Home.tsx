@@ -18,13 +18,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AnimeBannerText from '~/components/home/AnimeBannerText';
 import ContinueWatchingRow from '~/components/home/ContinueWatchingRow';
 import HomeBanner from '~/components/home/HomeBanner';
 import HomeButtons from '~/components/home/HomeButtons';
 import RowItem from '~/components/home/RowItem';
 import ErrorScreen from '~/components/shared/ErrorScreen';
 import LoadingScreen from '~/components/shared/LoadingScreen';
+import { hp } from '~/helpers/common';
 import { fetchAniListHomePage } from '~/services/AniListService';
 import { Anime } from '~/types';
 
@@ -95,6 +95,7 @@ const Home = () => {
     setActiveIndex(startIndex);
 
     if (spotlight.length > 1) {
+      x.value = startIndex * width;
       requestAnimationFrame(() => {
         bannerRef.current?.scrollToOffset({
           offset: startIndex * width,
@@ -102,7 +103,7 @@ const Home = () => {
         });
       });
     }
-  }, [bannerRef, homePageData, width]);
+  }, [bannerRef, homePageData, width, x]);
 
   const handleBannerMomentumEnd = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -119,6 +120,7 @@ const Home = () => {
         }
 
         if (nextIndex !== visibleIndex) {
+          x.value = nextIndex * width;
           bannerRef.current?.scrollToOffset({
             offset: nextIndex * width,
             animated: false,
@@ -129,7 +131,7 @@ const Home = () => {
       setActiveIndex(nextIndex);
       setIsAutoPlay(true);
     },
-    [bannerRef, spotlightAnime.length, width]
+    [bannerRef, spotlightAnime.length, width, x]
   );
 
   useEffect(() => {
@@ -156,33 +158,27 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
         scrollEventThrottle={16}>
-        {activeAnime ? (
-          <HomeBanner item={activeAnime} onPress={() => openDetails(activeAnime)} />
-        ) : null}
-
         <View className="flex flex-col">
           <Animated.FlatList
             bounces={false}
             data={loopedSpotlight}
             getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
             horizontal
-            initialNumToRender={9}
+            initialNumToRender={5}
             keyExtractor={(item, index) => `spotlight-${item.slug}-${index}`}
-            maxToRenderPerBatch={9}
+            maxToRenderPerBatch={5}
             onMomentumScrollEnd={handleBannerMomentumEnd}
             onScroll={onScroll}
             onScrollBeginDrag={() => setIsAutoPlay(false)}
             pagingEnabled
             ref={bannerRef}
-            removeClippedSubviews
+            removeClippedSubviews={false}
             scrollEventThrottle={16}
             showsHorizontalScrollIndicator={false}
-            style={{ flexGrow: 0 }}
+            style={{ height: hp(50) }}
             viewabilityConfigCallbackPairs={bannerViewabilityPairs.current}
             windowSize={5}
-            renderItem={({ item, index }) => (
-              <AnimeBannerText item={item} index={index} x={x} onPress={() => openDetails(item)} />
-            )}
+            renderItem={({ item }) => <HomeBanner item={item} onPress={() => openDetails(item)} />}
           />
 
           <HomeButtons anime={activeAnime} />
