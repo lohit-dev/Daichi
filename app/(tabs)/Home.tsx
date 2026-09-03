@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AnimeBannerText from '~/components/home/AnimeBannerText';
 import ContinueWatchingRow from '~/components/home/ContinueWatchingRow';
 import HomeBanner from '~/components/home/HomeBanner';
+import HomeButtons from '~/components/home/HomeButtons';
 import RowItem from '~/components/home/RowItem';
 import ErrorScreen from '~/components/shared/ErrorScreen';
 import LoadingScreen from '~/components/shared/LoadingScreen';
@@ -183,6 +184,8 @@ const Home = () => {
               <AnimeBannerText item={item} index={index} x={x} onPress={() => openDetails(item)} />
             )}
           />
+
+          <HomeButtons anime={activeAnime} />
 
           <RowItem
             name="Hot Trends"
