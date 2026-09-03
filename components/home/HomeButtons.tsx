@@ -60,33 +60,32 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
   return (
     <Animated.View
       entering={FadeInUp.delay(400).duration(500)}
-      className="flex-row justify-evenly gap-4 px-5 pb-3 pt-1">
+      className="flex-row justify-evenly gap-5 px-16">
       <ScalePressable
-        className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-lime-300 py-[13px]"
+        className="flex-1 flex-row items-center justify-center gap-2 space-x-2 rounded-3xl bg-lime-300 p-3"
         disabled={!anime}
         haptic="none"
         onPress={handlePlayTrailer}>
-        <Play size={20} color="#000" variant="Bold" />
-        <Text className="text-base font-bold text-black">Play Trailer</Text>
+        <Play size={24} color="#000" variant="Bold" />
+        <Text className="text-lg font-semibold text-black">Play Trailer</Text>
       </ScalePressable>
 
       <ScalePressable
-        className={`flex-1 flex-row items-center justify-center gap-2 rounded-2xl border py-[13px] ${isInLibrary ? 'border-lime-300 bg-lime-300/10' : 'border-white/20 bg-white/[0.07]'}`}
+        className={`flex-1 flex-row items-center justify-center gap-2 space-x-2 rounded-3xl border p-3 ${isInLibrary ? 'border-lime-300 bg-lime-300/15' : 'border-gray-500 bg-transparent'}`}
         disabled={!anime}
         haptic="none"
         onPress={handleLibrary}>
         {isInLibrary ? (
-          <TickCircle size={20} variant="Bold" color="#bef264" />
+          <TickCircle size={24} variant="Bold" color="#bef264" />
         ) : (
-          <Add size={20} variant="Broken" color="#FFF" />
+          <Add size={24} variant="Broken" color="#FFF" />
         )}
-        <Text className={`text-base font-bold ${isInLibrary ? 'text-lime-300' : 'text-white'}`}>
+        <Text className={`text-lg font-semibold ${isInLibrary ? 'text-lime-300' : 'text-white'}`}>
           {isInLibrary ? 'In My List' : 'My List'}
         </Text>
       </ScalePressable>
     </Animated.View>
   );
-
 };
 
 export default HomeButtons;
