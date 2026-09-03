@@ -1,20 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { File, Paths } from 'expo-file-system';
+import { Asset, requestPermissionsAsync } from 'expo-media-library';
+import * as LegacyMediaLibrary from 'expo-media-library/legacy';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { ActivityIndicator, Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useToast } from 'react-native-toast-notifications';
 
 import ScalePressable from '~/components/shared/ScalePressable';
@@ -76,8 +66,23 @@ const ImagePreviewModal = ({ visible, imageUrl, title, onClose }: ImagePreviewMo
     if (isDownloading) return;
     setIsDownloading(true);
     try {
-      await File.downloadFileAsync(imageUrl, Paths.document);
-      toast.show('Poster saved to files', { type: 'success' });
+      const { status } = await requestPermissionsAsync();
+      if (status !== 'granted') {
+        toast.show('Permission to access photos was denied', { type: 'danger' });
+        return;
+      }
+
+      const cleanName = (title || 'poster').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const destFile = new File(Paths.cache, `${cleanName}.jpg`);
+      const downloaded = await File.downloadFileAsync(imageUrl, destFile);
+
+      try {
+        await Asset.create(downloaded.uri);
+      } catch {
+        await LegacyMediaLibrary.saveToLibraryAsync(downloaded.uri);
+      }
+
+      toast.show('Poster saved to Photos', { type: 'success' });
     } catch (e) {
       console.error(e);
       toast.show('Could not save poster', { type: 'danger' });

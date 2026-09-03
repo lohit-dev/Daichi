@@ -14,6 +14,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  Pressable,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -85,7 +86,7 @@ const AnimeDetails = () => {
   });
 
   const [isFav, setIsFav] = useState(() => savedAnimes.some((anime) => anime.slug === id));
-  const [isPosterModalVisible, setIsPosterModalVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const isUpcoming = animeData?.status?.toLowerCase().includes('not yet aired');
   const canWatch = !isUpcoming;
   const bannerImage = animeData?.bannerImage || animeExtras?.bannerImage;
@@ -253,12 +254,17 @@ const AnimeDetails = () => {
         showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
           {bannerImage ? (
-            <Animated.Image
-              fadeDuration={0}
-              resizeMode="cover"
-              source={{ uri: bannerImage }}
-              style={[styles.heroImage, { width: width + heroPanDistance }, heroPanStyle]}
-            />
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setPreviewImage(bannerImage || animeData.image)}
+              accessibilityLabel="View full banner image">
+              <Animated.Image
+                fadeDuration={0}
+                resizeMode="cover"
+                source={{ uri: bannerImage }}
+                style={[styles.heroImage, { width: width + heroPanDistance }, heroPanStyle]}
+              />
+            </Pressable>
           ) : null}
           <LinearGradient
             colors={['rgba(4, 5, 4, 0.12)', 'rgba(4, 5, 4, 0.4)', '#0a0a0a']}
@@ -266,6 +272,7 @@ const AnimeDetails = () => {
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
 
           <SafeAreaView edges={['top']} style={styles.heroSafeArea}>
@@ -314,7 +321,7 @@ const AnimeDetails = () => {
 
         <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.titleBlock}>
           <ScalePressable
-            onPress={() => setIsPosterModalVisible(true)}
+            onPress={() => setPreviewImage(animeData.image)}
             scaleTo={0.95}
             haptic="light"
             accessibilityLabel="View full poster">
@@ -487,10 +494,10 @@ const AnimeDetails = () => {
       />
 
       <ImagePreviewModal
-        visible={isPosterModalVisible}
-        imageUrl={animeData.image}
+        visible={Boolean(previewImage)}
+        imageUrl={previewImage ?? undefined}
         title={animeData.title}
-        onClose={() => setIsPosterModalVisible(false)}
+        onClose={() => setPreviewImage(null)}
       />
     </View>
   );

@@ -115,7 +115,14 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      {/* Tapping anywhere on the banner background navigates to details */}
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onPress}
+        accessibilityLabel={`View details for ${item.title}`}
+      />
+
+      <View style={styles.content} pointerEvents="box-none">
         <Pressable onPress={onPress} className="w-full items-center">
           <Animated.Text
             style={titleAnimatedStyle}

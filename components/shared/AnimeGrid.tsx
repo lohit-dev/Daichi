@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
 import LottieView from 'lottie-react-native';
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import AnimeCard from './AnimeCard';

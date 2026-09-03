@@ -1,8 +1,8 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, ArrowRight2 } from 'iconsax-react-native';
-import { useCallback } from 'react';
 import LottieView from 'lottie-react-native';
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
