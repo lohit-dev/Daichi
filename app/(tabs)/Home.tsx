@@ -157,7 +157,6 @@ const Home = () => {
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical
         scrollEventThrottle={16}>
-
         {/* ── Hero Banner Block ─────────────────────────────────── */}
         <View style={{ position: 'relative' }}>
           {/* Background poster image with built-in gradients */}
@@ -190,18 +189,15 @@ const Home = () => {
             )}
           />
 
-          {/* Pagination dots */}
+          {/* Pagination dots — bottom-right of the banner */}
           {spotlightAnime.length > 1 && (
             <View style={styles.dotsContainer}>
               {spotlightAnime.map((_, i) => {
-                const dotActive = (activeIndex % spotlightAnime.length) === i;
+                const dotActive = activeIndex % spotlightAnime.length === i;
                 return (
                   <View
                     key={i}
-                    style={[
-                      styles.dot,
-                      dotActive ? styles.dotActive : styles.dotInactive,
-                    ]}
+                    style={[styles.dot, dotActive ? styles.dotActive : styles.dotInactive]}
                   />
                 );
               })}
@@ -209,10 +205,11 @@ const Home = () => {
           )}
         </View>
 
-        {/* ── Buttons & Content Rows ───────────────────────────── */}
-        <View className="flex flex-col">
-          <HomeButtons anime={activeAnime} />
+        {/* Buttons sit right below the hero — no gap */}
+        <HomeButtons anime={activeAnime} />
 
+        {/* Content rows */}
+        <View className="flex flex-col">
           <RowItem
             name="Hot Trends"
             seeAll
@@ -250,6 +247,7 @@ const Home = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
+
   );
 };
 
@@ -258,23 +256,23 @@ export default Home;
 const styles = StyleSheet.create({
   dotsContainer: {
     position: 'absolute',
-    bottom: 12,
+    bottom: 10,
     right: 16,
     flexDirection: 'row',
-    gap: 5,
+    gap: 4,
     alignItems: 'center',
   },
   dot: {
     borderRadius: 99,
   },
   dotActive: {
-    width: 18,
-    height: 5,
+    width: 16,
+    height: 4,
     backgroundColor: '#bef264',
   },
   dotInactive: {
-    width: 5,
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.35)',
+    width: 4,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
   },
 });
