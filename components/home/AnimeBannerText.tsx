@@ -1,4 +1,3 @@
-import { Star1 } from 'iconsax-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -51,14 +50,11 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
     });
   }
 
-  if (item.rating && item.rating !== 'N/A') {
+  if (item.date) {
     infoItems.push({
-      key: 'rating',
+      key: 'date',
       element: (
-        <View className="flex-row items-center gap-1">
-          <Star1 size={13} color="#bef264" variant="Bold" />
-          <Text className="font-salsa text-base font-semibold text-lime-300">{item.rating}</Text>
-        </View>
+        <Text className="font-salsa text-base font-semibold text-gray-300">{item.date}</Text>
       ),
     });
   }
@@ -69,26 +65,6 @@ const AnimeBannerText = ({ item, index, x, onPress }: AnimeBannerTextProps) => {
       element: (
         <Text className="font-salsa text-base font-semibold text-gray-300">
           {item.episodeNumber ? `${item.episodeNumber} Eps` : item.episode}
-        </Text>
-      ),
-    });
-  }
-
-  if (item.date) {
-    infoItems.push({
-      key: 'date',
-      element: (
-        <Text className="font-salsa text-base font-semibold text-gray-300">{item.date}</Text>
-      ),
-    });
-  }
-
-  if (item.genres && item.genres.length > 0) {
-    infoItems.push({
-      key: 'genres',
-      element: (
-        <Text className="font-salsa text-base font-semibold text-gray-300">
-          {item.genres.slice(0, 2).join(', ')}
         </Text>
       ),
     });
