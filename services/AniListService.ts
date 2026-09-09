@@ -1,3 +1,6 @@
+import * as KitsuService from './KitsuService';
+
+import { useSettingsStore } from '~/app/_store/useSettingsStore';
 import { cleanHtml, formatIdToTitle } from '~/helpers/text';
 import {
   AniListAnimeDetails,
@@ -9,6 +12,14 @@ import {
   CastPersonKind,
   CastWork,
 } from '~/types';
+
+const isKitsuActive = () => {
+  try {
+    return useSettingsStore.getState().provider === 'kitsu';
+  } catch {
+    return false;
+  }
+};
 
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co';
 const REQUEST_TIMEOUT_MS = 12_000;
@@ -417,6 +428,10 @@ async function queryAniList<T>(query: string, variables?: Record<string, unknown
 }
 
 export const fetchAniListHomePage = async (): Promise<AniListHomeResponse> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuHomePage();
+  }
+
   const data = await queryAniList<{
     spotlight: Pick<RawPage, 'media'>;
     airing: Pick<RawPage, 'media'>;
@@ -467,6 +482,10 @@ const toSort = (value?: string) => {
 };
 
 export const fetchAniListSearch = async (params: SearchParams): Promise<AniListSearchResponse> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuSearch(params);
+  }
+
   const filters = params.filters;
   const data = await queryAniList<{ Page: RawPage }>(SEARCH_QUERY, {
     page: params.page ?? 1,
@@ -489,6 +508,10 @@ export const fetchAniListSearch = async (params: SearchParams): Promise<AniListS
 };
 
 export const fetchAniListAnimeById = async (identifier: string): Promise<AniListAnimeDetails> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuAnimeById(identifier);
+  }
+
   const numericId = Number(identifier);
   const data = await queryAniList<{ Media: RawMedia | null }>(DETAILS_QUERY, {
     id: Number.isInteger(numericId) && numericId > 0 ? numericId : undefined,
@@ -501,6 +524,10 @@ export const fetchAniListAnimeById = async (identifier: string): Promise<AniList
 };
 
 export const fetchAniListAnimeExtras = async (animeId: string) => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuAnimeExtras(animeId);
+  }
+
   const id = Number(animeId);
   if (!Number.isInteger(id) || id <= 0) {
     throw new AniListRequestError('An AniList ID is required to load anime extras.', 400);
@@ -567,6 +594,10 @@ const ANIME_CAST_PAGE_QUERY = `
 `;
 
 export const fetchAniListAnimeCastPage = async (animeId: string, page: number, perPage = 10) => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuAnimeCastPage(animeId, page, perPage);
+  }
+
   const id = Number(animeId);
   if (!Number.isInteger(id) || id <= 0) {
     throw new AniListRequestError('An AniList ID is required to load cast.', 400);
@@ -631,6 +662,10 @@ export const fetchAniListCastPerson = async (
   kind: CastPersonKind,
   personId: string
 ): Promise<CastPersonDetails> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuCastPerson(kind, personId);
+  }
+
   const id = Number(personId);
   if (!Number.isInteger(id) || id <= 0) {
     throw new AniListRequestError('A valid cast member ID is required.', 400);
@@ -755,11 +790,19 @@ export const fetchAniListCastPerson = async (
 };
 
 export const fetchAniListSubbed = async (): Promise<Anime[]> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuSubbed();
+  }
+
   const data = await queryAniList<{ Page: Pick<RawPage, 'media'> }>(SUBBED_QUERY);
   return data.Page.media.map(mapAnime);
 };
 
 export const fetchAniListDubbed = async (): Promise<Anime[]> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuDubbed();
+  }
+
   const data = await queryAniList<{ Page: Pick<RawPage, 'media'> }>(DUBBED_QUERY);
   return data.Page.media.map(mapAnime);
 };
@@ -803,6 +846,10 @@ export const fetchAniListSubbedPage = async (
   page: number,
   perPage = 24
 ): Promise<AniListSearchResponse> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuSubbedPage(page, perPage);
+  }
+
   const data = await queryAniList<{ Page: RawPage }>(SUBBED_PAGE_QUERY, { page, perPage });
   return {
     results: data.Page.media.map(mapAnime),
@@ -817,6 +864,10 @@ export const fetchAniListDubbedPage = async (
   page: number,
   perPage = 24
 ): Promise<AniListSearchResponse> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuDubbedPage(page, perPage);
+  }
+
   const data = await queryAniList<{ Page: RawPage }>(DUBBED_PAGE_QUERY, { page, perPage });
   return {
     results: data.Page.media.map(mapAnime),
@@ -1250,6 +1301,10 @@ export const fetchAniListBrowse = async (
   page: number,
   perPage = 24
 ): Promise<AniListSearchResponse> => {
+  if (isKitsuActive()) {
+    return KitsuService.fetchKitsuBrowse(category, page, perPage);
+  }
+
   const vars = CATEGORY_VARS[category];
 
   const data = await queryAniList<{ Page: RawPage }>(

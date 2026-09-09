@@ -38,6 +38,7 @@ const Home = () => {
     data: homePageData,
     error,
     isLoading,
+    refetch,
   } = useQuery({
     queryKey: ['anilist', 'home'],
     queryFn: fetchAniListHomePage,
@@ -136,7 +137,14 @@ const Home = () => {
 
   if (isLoading) return <LoadingScreen />;
 
-  if (error) return <ErrorScreen />;
+  if (error) {
+    return (
+      <ErrorScreen
+        message={error instanceof Error ? error.message : 'An error occurred'}
+        onRetry={() => refetch()}
+      />
+    );
+  }
 
   return (
     <SafeAreaView edges={['left', 'right']} className="flex-1 bg-neutral-950">

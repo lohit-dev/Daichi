@@ -32,6 +32,7 @@ import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow'
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
 import ImagePreviewModal from '~/components/details/ImagePreviewModal';
 import RowItem from '~/components/home/RowItem';
+import ErrorScreen from '~/components/shared/ErrorScreen';
 import ScalePressable from '~/components/shared/ScalePressable';
 import YoutubeLogo from '~/components/shared/YoutubeLogo';
 import { darkTheme } from '~/constants/Colors';
@@ -73,6 +74,7 @@ const AnimeDetails = () => {
     data: animeData,
     error,
     isLoading,
+    refetch,
   } = useQuery<AnimeInfoResponse>({
     queryKey: ['anilist', 'details', id],
     queryFn: () => fetchAniListAnimeById(id),
@@ -221,20 +223,10 @@ const AnimeDetails = () => {
 
   if (error) {
     return (
-      <View className="flex flex-1 items-center justify-center bg-neutral-950 px-8">
-        <LottieView
-          source={require('~/assets/lottie/Error.json')}
-          autoPlay
-          loop
-          style={{ height: hp(34), width: wp(70) }}
-        />
-        <Text className="mt-3 text-center text-xl text-white">
-          {error instanceof Error ? error.message : 'An error occurred'}
-        </Text>
-        <ScalePressable onPress={handleBack} style={styles.errorBackButton} haptic="medium">
-          <Text style={styles.errorBackText}>Back to discover</Text>
-        </ScalePressable>
-      </View>
+      <ErrorScreen
+        message={error instanceof Error ? error.message : 'An error occurred'}
+        onRetry={() => refetch()}
+      />
     );
   }
 
@@ -466,7 +458,7 @@ const AnimeDetails = () => {
       </ScrollView>
 
       <EpisodeListSheet
-        animeId={animeData.id}
+        animeId={animeData.aniListId ? String(animeData.aniListId) : animeData.id}
         malId={animeData.malId}
         fallbackImage={animeData.image}
         bottomSheetRef={bottomSheetRef as React.RefObject<BottomSheetModal>}
@@ -478,7 +470,7 @@ const AnimeDetails = () => {
             pathname: '/anime/watch/[episodeId]',
             params: {
               episodeId,
-              animeId: animeData.id,
+              animeId: animeData.aniListId ? String(animeData.aniListId) : animeData.id,
               animeSlug,
               type: selectedType,
               animeTitle: animeData.title,

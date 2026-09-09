@@ -35,10 +35,12 @@ Daichi (大智, "great wisdom") is a free, open-source anime app built with **Ex
 Features of Daichi include:
 
 - Browse trending, latest, upcoming, and top airing anime
+- **Dual API Providers (AniList & Kitsu Fallback)**: Transparent fallback to Kitsu API if AniList experiences outages or server stability issues
+- **One-Click Provider Switch & Settings Toggle**: Switch providers seamlessly directly from error screens or toggle in Settings
 - Search thousands of anime instantly
 - Save anime to your personal library
 - Browse episodes with an interactive bottom sheet
-- Built-in video player
+- Built-in video player with automatic AniList ID resolution for reliable streams
 - Resume watching from your history
 - Smooth native animations
 - Clean dark-themed interface
@@ -48,6 +50,8 @@ Features of Daichi include:
 - [Expo](https://expo.dev) + [React Native](https://reactnative.dev) + [TypeScript](https://www.typescriptlang.org/)
 - [Expo Router](https://docs.expo.dev/router/introduction/) for navigation
 - [NativeWind](https://www.nativewind.dev/) (Tailwind for React Native)
+- [AniList GraphQL API](https://graphql.anilist.co) & [Kitsu API](https://kitsu.io/) for metadata catalogues
+- [Zustand](https://github.com/pmndrs/zustand) + AsyncStorage for persistent library and settings
 - [EAS Build](https://docs.expo.dev/build/introduction/) for native builds
 
 ## Issues, Feature Requests and Contributing

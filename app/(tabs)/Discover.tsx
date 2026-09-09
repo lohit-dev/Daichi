@@ -34,6 +34,7 @@ const Discover = () => {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: refetchSearch,
   } = useInfiniteQuery<SearchResponse>({
     queryKey: ['anilist', 'search', normalizedDebouncedSearchQuery],
     queryFn: ({ pageParam = 1 }) =>
@@ -118,7 +119,14 @@ const Discover = () => {
 
       {hasSearchQuery && isSearchLoading && <LoadingScreen />}
 
-      {hasSearchQuery && !isSearchLoading && searchError && <ErrorScreen />}
+      {hasSearchQuery && !isSearchLoading && searchError && (
+        <ErrorScreen
+          message={
+            searchError instanceof Error ? searchError.message : 'An error occurred while searching'
+          }
+          onRetry={() => refetchSearch()}
+        />
+      )}
 
       {/* Search Results */}
       {hasSearchQuery && !isSearchLoading && searchAnimes.length > 0 && (

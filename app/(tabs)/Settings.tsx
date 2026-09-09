@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
@@ -9,6 +10,7 @@ import {
   Moon,
   Logout,
   Code1,
+  Global,
 } from 'iconsax-react-native';
 import { useState } from 'react';
 import {
@@ -25,14 +27,37 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useToast } from 'react-native-toast-notifications';
 
+import { useSettingsStore } from '~/app/_store/useSettingsStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 
 const Settings = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const provider = useSettingsStore((s) => s.provider);
+  const setProvider = useSettingsStore((s) => s.setProvider);
+
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [autoPlay, setAutoPlay] = useState(true);
+
+  const handleProviderToggle = async (useKitsu: boolean) => {
+    const targetProvider = useKitsu ? 'kitsu' : 'anilist';
+    setProvider(targetProvider);
+    toast.show(
+      targetProvider === 'kitsu'
+        ? 'Active provider set to Kitsu'
+        : 'Active provider set to AniList',
+      {
+        type: 'success',
+        placement: 'bottom',
+        duration: 2000,
+      }
+    );
+    await queryClient.invalidateQueries();
+  };
 
   // Dev mode password modal state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -82,6 +107,19 @@ const Settings = () => {
       title: 'Security',
       subtitle: 'Change password & security settings',
       onPress: () => {},
+    },
+    {
+      icon: <Global size={24} color="#a3e635" variant="Bold" />,
+      title: 'Use Kitsu API Provider',
+      subtitle: provider === 'kitsu' ? 'Currently active: Kitsu' : 'Currently active: AniList',
+      rightElement: (
+        <Switch
+          value={provider === 'kitsu'}
+          onValueChange={handleProviderToggle}
+          trackColor={{ false: '#525252', true: '#a3e635' }}
+          thumbColor={provider === 'kitsu' ? '#fff' : '#f4f3f4'}
+        />
+      ),
     },
     {
       icon: <VideoPlay size={24} color="#a3e635" variant="Bold" />,
