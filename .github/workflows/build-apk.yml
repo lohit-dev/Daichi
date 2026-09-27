@@ -2,6 +2,11 @@ name: Build and Attach APK
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Existing release tag to attach APKs to (optional)'
+        required: false
+        type: string
   release:
     types: [published]
 
@@ -124,7 +129,9 @@ jobs:
           retention-days: 14
 
       - name: Attach APK to published release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
           files: android/app/build/outputs/apk/release/Daichi-v*.apk
+          overwrite_files: true
