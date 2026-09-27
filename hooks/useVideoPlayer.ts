@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { SelectedVideoTrackType, TextTrackType } from 'react-native-video';
+import { SelectedVideoTrackType } from 'react-native-video';
 
-import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import {
   getPreferredSubtitleIndex,
   loadSubtitleVttOnce,
@@ -10,6 +9,7 @@ import {
   parseVttCues,
 } from '~/helpers/subtitles';
 import { fetchAnimeStreamingLink } from '~/services/AnimeService';
+import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import { AnikotoStreamResponse, SubtitleTrack } from '~/types';
 
 export type VideoSourceMetadata = {
@@ -151,20 +151,6 @@ export const useVideoPlayer = (
       }));
   }, [primaryServer]);
 
-  // Attach external captions to the native source as well as the custom
-  // overlay. Native PiP can only render captions that belong to the native
-  // player item itself.
-  const nativeTextTracks = useMemo(
-    () =>
-      validSubtitleTracks.map((track, index) => ({
-        title: track.title || `Subtitle ${index + 1}`,
-        language: 'en' as const,
-        type: track.uri.toLowerCase().includes('.srt') ? TextTrackType.SUBRIP : TextTrackType.VTT,
-        uri: track.uri,
-      })),
-    [validSubtitleTracks]
-  );
-
   // Reset subtitle selection when server changes
   useEffect(() => {
     const index = getPreferredSubtitleIndex(validSubtitleTracks);
@@ -261,7 +247,6 @@ export const useVideoPlayer = (
             imageUri: metadata.imageUri,
           }
         : undefined,
-      textTracks: nativeTextTracks,
     }),
     [
       referer,
@@ -271,7 +256,6 @@ export const useVideoPlayer = (
       metadata?.artist,
       metadata?.description,
       metadata?.imageUri,
-      nativeTextTracks,
     ]
   );
 

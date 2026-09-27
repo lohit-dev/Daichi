@@ -4,9 +4,9 @@ import { useCallback, useMemo } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import AnimeCard from '~/components/shared/AnimeCard';
 import { getFormattedTitle } from '~/helpers/TextFormat';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 
 const MyList = () => {
   const savedAnimes = useSavedAnimesStore((s) => s.animes);

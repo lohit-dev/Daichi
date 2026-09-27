@@ -29,8 +29,8 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useSettingsStore } from '~/store/useSettingsStore';
 import ScalePressable from '~/components/shared/ScalePressable';
+import { useSettingsStore } from '~/store/useSettingsStore';
 
 const Settings = () => {
   const router = useRouter();

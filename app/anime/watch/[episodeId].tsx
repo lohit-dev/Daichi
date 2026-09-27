@@ -18,7 +18,6 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import ReAnimated, {
-  CurvedTransition,
   interpolate,
   useAnimatedReaction,
   useAnimatedScrollHandler,
@@ -27,10 +26,8 @@ import ReAnimated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Video, { SelectedTrackType, TextTrackType } from 'react-native-video';
+import Video from 'react-native-video';
 
-import { useHistoryStore } from '~/store/useHistoryStore';
-import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import type { Episode } from '~/components/watch/EpisodeList';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
@@ -40,6 +37,8 @@ import { clamp } from '~/helpers/subtitles';
 import { useEpisodeList } from '~/hooks/useEpisodeList';
 import { usePlayerControls } from '~/hooks/usePlayerControls';
 import { useVideoPlayer } from '~/hooks/useVideoPlayer';
+import { useHistoryStore } from '~/store/useHistoryStore';
+import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import type { Server, SubtitleCue, SubtitleTrack } from '~/types';
 
 // ===========================================================================
@@ -1498,24 +1497,6 @@ const WatchScreen = () => {
     [currentTime, subtitleCues]
   );
 
-  const nativeTextTracks = useMemo(
-    () =>
-      validSubtitleTracks.map((track, index) => ({
-        title: track.title || `Subtitle ${index + 1}`,
-        language: 'en' as const,
-        type: track.uri.toLowerCase().includes('.srt') ? TextTrackType.SUBRIP : TextTrackType.VTT,
-        uri: track.uri,
-      })),
-    [validSubtitleTracks]
-  );
-  const nativeSelectedTextTrack = useMemo(
-    () =>
-      isPiP && selectedSubtitleIndex !== null
-        ? { type: SelectedTrackType.INDEX, value: selectedSubtitleIndex }
-        : { type: SelectedTrackType.DISABLED },
-    [isPiP, selectedSubtitleIndex]
-  );
-
   // -----------------------------------------------------------------------
   // Episode helpers
   // -----------------------------------------------------------------------
@@ -1828,8 +1809,6 @@ const WatchScreen = () => {
             showNotificationControls
             preventsDisplaySleepDuringVideoPlayback
             enterPictureInPictureOnLeave
-            textTracks={nativeTextTracks}
-            selectedTextTrack={nativeSelectedTextTrack}
             onPictureInPictureStatusChanged={(e) => setIsPiP(e.isActive)}
             onProgress={handleProgress}
             onEnd={handleVideoEnd}

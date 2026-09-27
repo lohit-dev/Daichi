@@ -6,7 +6,6 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, Heart, Share } from 'iconsax-react-native';
 import LottieView from 'lottie-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 import {
   BackHandler,
   Alert,
@@ -31,8 +30,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
-import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow';
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
 import ImagePreviewModal from '~/components/details/ImagePreviewModal';
@@ -44,6 +43,7 @@ import { darkTheme } from '~/constants/Colors';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { hp, wp } from '~/helpers/common';
 import { fetchAniListAnimeById, fetchAniListAnimeExtras } from '~/services/AniListService';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import { AniListAnimeExtras, Anime, AnimeInfoResponse } from '~/types';
 
 type DetailLineProps = {

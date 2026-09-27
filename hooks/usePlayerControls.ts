@@ -3,8 +3,8 @@ import * as ScreenOrientation from 'expo-screen-orientation';
 import { useCallback, useEffect, useRef } from 'react';
 import { Animated, BackHandler, PanResponder } from 'react-native';
 
-import { usePlayerStore } from '~/store/usePlayerStore';
 import { clamp } from '~/helpers/subtitles';
+import { usePlayerStore } from '~/store/usePlayerStore';
 
 export const usePlayerControls = (seekTo: (time: number) => void, onExit?: () => void) => {
   const router = useRouter();

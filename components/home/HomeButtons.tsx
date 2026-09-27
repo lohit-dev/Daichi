@@ -3,8 +3,8 @@ import { Add, Play, TickCircle } from 'iconsax-react-native';
 import React from 'react';
 import { Alert, Text, View } from 'react-native';
 
-import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import ScalePressable from '~/components/shared/ScalePressable';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import { Anime } from '~/types';
 
 type HomeButtonsProps = {

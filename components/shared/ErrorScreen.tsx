@@ -6,8 +6,8 @@ import { Alert, Text, View } from 'react-native';
 
 import ScalePressable from './ScalePressable';
 
-import { useSettingsStore } from '~/store/useSettingsStore';
 import { hp, wp } from '~/helpers/common';
+import { useSettingsStore } from '~/store/useSettingsStore';
 
 type ErrorScreenProps = {
   message?: string;

@@ -4,8 +4,8 @@ import { View, Text, Pressable, ScrollView, Animated, StyleSheet } from 'react-n
 
 import ScalePressable from '../shared/ScalePressable';
 
-import { usePlayerStore } from '~/store/usePlayerStore';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
+import { usePlayerStore } from '~/store/usePlayerStore';
 import { Server, SubtitleTrack } from '~/types';
 
 type SettingsSheetProps = {

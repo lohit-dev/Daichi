@@ -6,10 +6,10 @@ import TextTicker from 'react-native-text-ticker';
 
 import ScalePressable from '../shared/ScalePressable';
 
-import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
 import { formatTime } from '~/helpers/common';
 import { clamp } from '~/helpers/subtitles';
+import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import { SubtitleCue } from '~/types';
 
 // ---------------------------------------------------------------------------
