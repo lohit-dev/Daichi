@@ -126,6 +126,10 @@ const EpisodeListSheet = ({
       snapPoints={snapPoints}
       index={0}
       enableDynamicSizing={false}
+      // The sheet has a single fixed snap point, so vertical gestures should
+      // belong to the episode list instead of occasionally being captured by
+      // the sheet's content pan gesture on Android.
+      enableContentPanningGesture={false}
       enablePanDownToClose={enablePanDownToClose}
       backdropComponent={enableBackdropPress ? undefined : () => null}
       onDismiss={() => {
@@ -203,6 +207,12 @@ const EpisodeListSheet = ({
               renderItem={renderEpisodeCard}
               keyExtractor={(item: Episode) => item.episodeId}
               contentContainerStyle={styles.listContent}
+              style={styles.list}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              removeClippedSubviews={false}
+              scrollEnabled
+              showsVerticalScrollIndicator={false}
               initialNumToRender={12}
               maxToRenderPerBatch={10}
               windowSize={5}
@@ -262,5 +272,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#bef264',
   },
-  listContent: { paddingVertical: 10, paddingHorizontal: 14, gap: 10 },
+  list: { flex: 1 },
+  listContent: { flexGrow: 1, paddingVertical: 10, paddingHorizontal: 14, gap: 10 },
 });

@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useCallback } from 'react';
-import { useToast } from 'react-native-toast-notifications';
-import { SelectedVideoTrackType } from 'react-native-video';
+import { SelectedVideoTrackType, TextTrackType } from 'react-native-video';
 
-import { usePlayerStore, RESIZE_MODES } from '~/app/_store/usePlayerStore';
+import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import {
   getPreferredSubtitleIndex,
   loadSubtitleVttOnce,
@@ -152,6 +151,20 @@ export const useVideoPlayer = (
       }));
   }, [primaryServer]);
 
+  // Attach external captions to the native source as well as the custom
+  // overlay. Native PiP can only render captions that belong to the native
+  // player item itself.
+  const nativeTextTracks = useMemo(
+    () =>
+      validSubtitleTracks.map((track, index) => ({
+        title: track.title || `Subtitle ${index + 1}`,
+        language: 'en' as const,
+        type: track.uri.toLowerCase().includes('.srt') ? TextTrackType.SUBRIP : TextTrackType.VTT,
+        uri: track.uri,
+      })),
+    [validSubtitleTracks]
+  );
+
   // Reset subtitle selection when server changes
   useEffect(() => {
     const index = getPreferredSubtitleIndex(validSubtitleTracks);
@@ -175,8 +188,6 @@ export const useVideoPlayer = (
     selectedSubtitleIndex !== null ? validSubtitleTracks[selectedSubtitleIndex]?.uri : undefined;
   const subtitleKey = `${activeServerIndex}:${selectedSubtitleIndex ?? 'none'}:${selectedSubtitleUri ?? ''}`;
   const isSubtitleReady = readySubtitleKey === subtitleKey;
-
-  const toast = useToast();
 
   useEffect(() => {
     if (!selectedSubtitleUri || !referer) {
@@ -212,10 +223,6 @@ export const useVideoPlayer = (
               setSubtitleCues([]);
               setSubtitleStatus('Subtitles unavailable — try another server');
               setReadySubtitleKey(subtitleKey);
-              toast.show('Unable to download subtitles. Please choose a different server.', {
-                type: 'danger',
-                placement: 'bottom',
-              });
             }
             return;
           }
@@ -235,7 +242,6 @@ export const useVideoPlayer = (
     setSubtitleCues,
     setSubtitleStatus,
     setReadySubtitleKey,
-    toast,
   ]);
 
   // -----------------------------------------------------------------------
@@ -255,6 +261,7 @@ export const useVideoPlayer = (
             imageUri: metadata.imageUri,
           }
         : undefined,
+      textTracks: nativeTextTracks,
     }),
     [
       referer,
@@ -264,6 +271,7 @@ export const useVideoPlayer = (
       metadata?.artist,
       metadata?.description,
       metadata?.imageUri,
+      nativeTextTracks,
     ]
   );
 

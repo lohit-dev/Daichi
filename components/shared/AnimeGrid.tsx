@@ -1,6 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import LottieView from 'lottie-react-native';
 import { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import AnimeCard from './AnimeCard';
 
@@ -43,7 +44,7 @@ export default function AnimeGrid({
   );
 
   return (
-    <FlatList
+    <FlashList
       data={data}
       keyExtractor={(item) => item.slug}
       numColumns={NUM_COLUMNS}
@@ -56,11 +57,8 @@ export default function AnimeGrid({
         styles.content,
         contentPaddingBottom != null ? { paddingBottom: contentPaddingBottom } : null,
       ]}
-      columnWrapperStyle={styles.row}
-      initialNumToRender={18}
-      maxToRenderPerBatch={12}
-      windowSize={5}
       removeClippedSubviews
+      drawDistance={500}
     />
   );
 }
@@ -70,8 +68,5 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: hp(10),
     paddingHorizontal: wp(1),
-  },
-  row: {
-    justifyContent: 'flex-start',
   },
 });

@@ -1,6 +1,6 @@
 import * as KitsuService from './KitsuService';
 
-import { useSettingsStore } from '~/app/_store/useSettingsStore';
+import { useSettingsStore } from '~/store/useSettingsStore';
 import { cleanHtml, formatIdToTitle } from '~/helpers/text';
 import {
   AniListAnimeDetails,

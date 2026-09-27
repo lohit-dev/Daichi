@@ -11,7 +11,6 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ToastProvider } from 'react-native-toast-notifications';
 
 import { useColorScheme } from '~/hooks/useColorScheme';
 import { AniListRequestError } from '~/services/AniListService';
@@ -52,7 +51,9 @@ export default function RootLayout() {
     const setSystemBars = () => {
       try {
         if (Platform.OS === 'android') {
-          NavigationBar.setHidden(true);
+          // Keep the system gesture region available. Hiding the navigation
+          // bar globally makes Android consume the first back gesture just to
+          // reveal the system bars instead of delivering Back to the router.
           NavigationBar.setStyle('light');
         }
       } catch (error) {
@@ -85,18 +86,16 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <BottomSheetModalProvider>
           <QueryClientProvider client={queryClient}>
-            <ToastProvider>
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <StatusBar animated style="inverted" hidden />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" options={{ headerShown: false }} />
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="browse/[category]" options={{ headerShown: false }} />
-                  <Stack.Screen name="browse/list" options={{ headerShown: false }} />
-                  <Stack.Screen name="trailer/[videoId]" options={{ headerShown: false }} />
-                </Stack>
-              </ThemeProvider>
-            </ToastProvider>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <StatusBar animated style="inverted" hidden={false} />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="browse/[category]" options={{ headerShown: false }} />
+                <Stack.Screen name="browse/list" options={{ headerShown: false }} />
+                <Stack.Screen name="trailer/[videoId]" options={{ headerShown: false }} />
+              </Stack>
+            </ThemeProvider>
           </QueryClientProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>

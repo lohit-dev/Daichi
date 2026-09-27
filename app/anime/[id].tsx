@@ -6,8 +6,11 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, Heart, Share } from 'iconsax-react-native';
 import LottieView from 'lottie-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 import {
   BackHandler,
+  Alert,
+  ImageBackground,
   ScrollView,
   Share as RNShare,
   StyleSheet,
@@ -19,15 +22,17 @@ import {
 import Animated, {
   Easing,
   FadeInDown,
+  interpolate,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useToast } from 'react-native-toast-notifications';
 
-import { useSavedAnimesStore } from '~/app/_store/useSavedAnimesStore';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import CharacterVoiceActorRow from '~/components/details/CharacterVoiceActorRow';
 import EpisodeListSheet from '~/components/details/EpisodeListSheet';
 import ImagePreviewModal from '~/components/details/ImagePreviewModal';
@@ -60,11 +65,13 @@ const AnimeDetails = () => {
   const nav = useRouter();
   const { width } = useWindowDimensions();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const toast = useToast();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [selectedType, setSelectedType] = useState<'sub' | 'dub'>('sub');
   const [isEpisodeSheetOpen, setIsEpisodeSheetOpen] = useState(false);
+  const [isTrailerVisible, setIsTrailerVisible] = useState(false);
+  const heartPulse = useSharedValue(1);
+  const trailerProgress = useSharedValue(0);
 
   const savedAnimes = useSavedAnimesStore((s) => s.animes);
   const addAnime = useSavedAnimesStore((s) => s.addAnime);
@@ -171,31 +178,52 @@ const AnimeDetails = () => {
     }
 
     setIsFav((current) => !current);
-    toast.show(isFav ? 'Removed from library' : 'Added to library', {
-      type: 'success',
-      placement: 'bottom',
-      duration: 2000,
-    });
-  }, [addAnime, animeData, isFav, removeAnime, toast]);
+    heartPulse.value = withSequence(
+      withTiming(1.24, { duration: 100 }),
+      withTiming(1, { duration: 140 }),
+      withTiming(1.12, { duration: 90 }),
+      withTiming(1, { duration: 130 })
+    );
+  }, [addAnime, animeData, heartPulse, isFav, removeAnime]);
+
+  const heartPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartPulse.value }],
+  }));
 
   const handlePlayTrailer = useCallback(() => {
     const trailerId = animeData?.trailer?.id;
     if (!trailerId) {
-      toast.show('A trailer is not available for this title yet.', {
-        type: 'normal',
-        placement: 'bottom',
-      });
+      Alert.alert('Trailer unavailable', 'A trailer is not available for this title yet.');
       return;
     }
 
-    nav.push({
-      pathname: '/trailer/[videoId]',
-      params: {
-        videoId: trailerId,
-        title: animeData.title,
-      },
+    // The preview tap is already a user gesture. Start the iframe immediately
+    // as it mounts instead of waiting for onReady, which can otherwise leave
+    // some WebView implementations paused after expansion.
+    setIsTrailerVisible(true);
+    trailerProgress.value = 0;
+    requestAnimationFrame(() => {
+      trailerProgress.value = withTiming(1, { duration: 420 });
     });
-  }, [animeData, nav, toast]);
+  }, [animeData, trailerProgress]);
+
+  const handleCloseTrailer = useCallback(() => {
+    trailerProgress.value = withTiming(0, { duration: 420 }, (finished) => {
+      if (finished) runOnJS(setIsTrailerVisible)(false);
+    });
+  }, [trailerProgress]);
+
+  const trailerHeight = Math.round((width - 40) * (9 / 16));
+  const trailerPreviewHeight = Math.max(50, trailerHeight);
+  const trailerContainerStyle = useAnimatedStyle(() => ({
+    height: interpolate(trailerProgress.value, [0, 1], [50, trailerHeight]),
+  }));
+  const trailerButtonStyle = useAnimatedStyle(() => ({
+    opacity: 1 - trailerProgress.value,
+  }));
+  const trailerPlayerStyle = useAnimatedStyle(() => ({
+    opacity: trailerProgress.value,
+  }));
 
   useFocusEffect(
     useCallback(() => {
@@ -291,12 +319,14 @@ const AnimeDetails = () => {
                   style={[styles.topBarButton, isFav && styles.topBarButtonActive]}
                   scaleTo={0.85}
                   haptic="medium">
-                  <Heart
-                    color="#FFFFFF"
-                    size={22}
-                    strokeWidth={2.2}
-                    variant={isFav ? 'Bold' : 'Linear'}
-                  />
+                  <Animated.View style={heartPulseStyle}>
+                    <Heart
+                      color="#FFFFFF"
+                      size={22}
+                      strokeWidth={2.2}
+                      variant={isFav ? 'Bold' : 'Linear'}
+                    />
+                  </Animated.View>
                 </ScalePressable>
               </View>
             </View>
@@ -382,15 +412,88 @@ const AnimeDetails = () => {
           </View>
 
           {animeData.trailer?.id ? (
-            <ScalePressable
-              onPress={handlePlayTrailer}
-              style={styles.ytTrailerButton}
-              haptic="light"
-              scaleTo={0.97}
-              testID="detail-trailer-button">
-              <YoutubeLogo size={28} color={darkTheme.colors.onTertiaryContainer} />
-              <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
-            </ScalePressable>
+            isTrailerVisible ? (
+              <Animated.View style={[styles.inlineTrailer, trailerContainerStyle]}>
+                <Animated.View
+                  pointerEvents="none"
+                  style={[styles.trailerLayer, trailerButtonStyle]}>
+                  <ScalePressable
+                    onPress={handlePlayTrailer}
+                    style={styles.ytTrailerButton}
+                    haptic="light"
+                    scaleTo={0.97}
+                    testID="detail-trailer-button">
+                    <ImageBackground
+                      source={{
+                        uri: `https://i.ytimg.com/vi/${animeData.trailer.id}/hqdefault.jpg`,
+                      }}
+                      style={[styles.trailerPreviewImage, { height: trailerPreviewHeight }]}
+                      imageStyle={styles.trailerPreviewImageAsset}>
+                      <View style={styles.trailerPreviewShade} />
+                    </ImageBackground>
+                    <YoutubeLogo size={28} color={darkTheme.colors.onTertiaryContainer} />
+                    <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
+                  </ScalePressable>
+                </Animated.View>
+                <Animated.View style={[styles.trailerLayer, trailerPlayerStyle]}>
+                  <YoutubePlayer
+                    height={trailerHeight}
+                    width={width - 40}
+                    videoId={animeData.trailer.id}
+                    play={isTrailerVisible}
+                    forceAndroidAutoplay
+                    initialPlayerParams={{
+                      controls: true,
+                      preventFullScreen: true,
+                      rel: false,
+                    }}
+                    webViewProps={{
+                      allowsInlineMediaPlayback: true,
+                      mediaPlaybackRequiresUserAction: false,
+                      scrollEnabled: false,
+                      bounces: false,
+                      overScrollMode: 'never',
+                      nestedScrollEnabled: false,
+                    }}
+                    onChangeState={(state: PLAYER_STATES) => {
+                      if (state === PLAYER_STATES.ENDED) handleCloseTrailer();
+                    }}
+                    onError={handleCloseTrailer}
+                    viewContainerStyle={styles.inlineTrailerPlayer}
+                    webViewStyle={styles.inlineTrailerPlayer}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Close trailer"
+                    onPress={handleCloseTrailer}
+                    style={styles.closeTrailerButton}>
+                    <Text style={styles.closeTrailerText}>×</Text>
+                  </Pressable>
+                </Animated.View>
+              </Animated.View>
+            ) : (
+              <ScalePressable
+                onPress={handlePlayTrailer}
+                style={[
+                  styles.inlineTrailer,
+                  styles.ytTrailerButton,
+                  styles.standaloneTrailerButton,
+                ]}
+                haptic="light"
+                scaleTo={0.97}
+                testID="detail-trailer-button">
+                <ImageBackground
+                  source={{
+                    uri: `https://i.ytimg.com/vi/${animeData.trailer.id}/hqdefault.jpg`,
+                  }}
+                  style={[styles.trailerPreviewImage, { height: trailerPreviewHeight }]}
+                  imageStyle={styles.trailerPreviewImageAsset}>
+                  <View style={styles.trailerPreviewShade} />
+                </ImageBackground>
+                <YoutubeLogo size={28} color={darkTheme.colors.onTertiaryContainer} />
+                <Text style={styles.ytTrailerText}>Watch Trailer on YouTube</Text>
+              </ScalePressable>
+            )
           ) : null}
 
           {!canWatch ? (
@@ -685,20 +788,80 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   ytTrailerButton: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    marginTop: 10,
+    marginTop: 0,
     minHeight: 50,
     borderRadius: 15,
-    backgroundColor: darkTheme.colors.tertiaryContainer,
+    overflow: 'hidden',
+    backgroundColor: '#172018',
+  },
+  standaloneTrailerButton: {
+    marginTop: 10,
+  },
+  trailerPreviewImage: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+  },
+  trailerPreviewImageAsset: {
+    borderRadius: 15,
+  },
+  trailerPreviewShade: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(9, 14, 9, 0.48)',
   },
   ytTrailerText: {
     color: darkTheme.colors.onTertiaryContainer,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  inlineTrailer: {
+    position: 'relative',
+    width: '100%',
+    marginTop: 10,
+    overflow: 'hidden',
+    borderRadius: 15,
+    backgroundColor: '#000000',
+  },
+  trailerLayer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    left: 0,
+  },
+  inlineTrailerPlayer: {
+    backgroundColor: '#000000',
+    borderRadius: 15,
+  },
+  closeTrailerButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    elevation: 8,
+  },
+  closeTrailerText: {
+    marginTop: -2,
+    color: '#ffffff',
+    fontSize: 25,
+    fontWeight: '300',
+    lineHeight: 29,
   },
   upcomingNotice: {
     marginTop: 10,

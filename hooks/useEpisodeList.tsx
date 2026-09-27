@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { Episode } from '~/components/watch/EpisodeList';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
@@ -36,13 +36,6 @@ export const useEpisodeList = (
   fallbackImage?: string,
   malId?: number | null
 ) => {
-  const mountedRef = useRef(false);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
   const episodesQuery = useQuery<AnikotoEpisode[]>({
     queryKey: ['anikoto', 'episodes', animeId],
     queryFn: () => fetchAnimeEpisode(animeId),
@@ -72,24 +65,6 @@ export const useEpisodeList = (
     staleTime: 30 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
-
-  // Eagerly fetch all remaining Kitsu pages in the background so thumbnails
-  // and descriptions appear for all episodes without waiting for scroll events.
-  // BottomSheetFlatList doesn't reliably fire onEndReached, so we prefetch.
-  useEffect(() => {
-    if (
-      mountedRef.current &&
-      kitsuImagesQuery.hasNextPage &&
-      !kitsuImagesQuery.isFetchingNextPage
-    ) {
-      kitsuImagesQuery.fetchNextPage();
-    }
-  }, [
-    kitsuImagesQuery.hasNextPage,
-    kitsuImagesQuery.isFetchingNextPage,
-    kitsuImagesQuery.fetchNextPage,
-    kitsuImagesQuery.data?.pages.length,
-  ]);
 
   const canFetchAniListFallback =
     (!resolvedMalId || kitsuAnimeQuery.isSuccess) &&
@@ -142,7 +117,10 @@ export const useEpisodeList = (
         const airDate = meta?.airDate;
         return {
           ...episode,
-          image: thumbnail || (anilistImagesQuery.isSuccess ? fallbackImage : episode.image),
+          // Keep a visible image while Kitsu/AniList metadata is resolving.
+          // The provider thumbnail still wins as soon as it arrives, but a
+          // route transition must never turn every card into a blank block.
+          image: thumbnail || fallbackImage || episode.image,
           description: description || episode.description,
           airDate: airDate || episode.airDate,
         };

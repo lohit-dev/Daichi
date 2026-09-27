@@ -1,9 +1,10 @@
+import { FlashList } from '@shopify/flash-list';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2, ArrowRight2 } from 'iconsax-react-native';
 import LottieView from 'lottie-react-native';
-import { useCallback } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,7 +15,7 @@ import { getFormattedTitle } from '~/helpers/TextFormat';
 import { fetchAniListAnimeCastPage } from '~/services/AniListService';
 import { CharacterVoiceActor } from '~/types';
 
-const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number }) => {
+const CastCard = React.memo(({ item, index }: { item: CharacterVoiceActor; index: number }) => {
   const router = useRouter();
 
   return (
@@ -85,7 +86,7 @@ const CastCard = ({ item, index }: { item: CharacterVoiceActor; index: number })
       </View>
     </Animated.View>
   );
-};
+});
 
 export default function CastScreen() {
   const router = useRouter();
@@ -151,15 +152,13 @@ export default function CastScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={cast}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          initialNumToRender={12}
-          maxToRenderPerBatch={12}
-          windowSize={7}
+          drawDistance={600}
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) fetchNextPage();
           }}

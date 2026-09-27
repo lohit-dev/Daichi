@@ -12,9 +12,18 @@
     "plugins": [
       "expo-router",
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "enableSceneSupport": true
+          }
+        }
+      ],
+      [
         "expo-navigation-bar",
         {
-          "behavior": "overlay-swipe"
+          "behavior": "overlay-swipe",
+          "hidden": false
         }
       ],
       "expo-font",
@@ -48,7 +57,8 @@
           "photosPermission": "Allow Daichi to access your photos.",
           "savePhotosPermission": "Allow Daichi to save photos."
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,

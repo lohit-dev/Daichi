@@ -1,6 +1,6 @@
 import { resolveAniListIdFromKitsuId } from './KitsuService';
 
-import { useSettingsStore } from '~/app/_store/useSettingsStore';
+import { useSettingsStore } from '~/store/useSettingsStore';
 import { AnikotoEpisodesResponse, AnikotoStreamResponse } from '~/types';
 
 // Hugging Face remains the source of playable episode availability and streams.

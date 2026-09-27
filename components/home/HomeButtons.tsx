@@ -1,10 +1,9 @@
 import { useRouter } from 'expo-router';
 import { Add, Play, TickCircle } from 'iconsax-react-native';
 import React from 'react';
-import { Text, View } from 'react-native';
-import { useToast } from 'react-native-toast-notifications';
+import { Alert, Text, View } from 'react-native';
 
-import { useSavedAnimesStore } from '~/app/_store/useSavedAnimesStore';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { Anime } from '~/types';
 
@@ -14,7 +13,6 @@ type HomeButtonsProps = {
 
 const HomeButtons = ({ anime }: HomeButtonsProps) => {
   const router = useRouter();
-  const toast = useToast();
   const savedAnimes = useSavedAnimesStore((state) => state.animes);
   const addAnime = useSavedAnimesStore((state) => state.addAnime);
   const removeAnime = useSavedAnimesStore((state) => state.removeAnime);
@@ -24,10 +22,7 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
 
   const handlePlayTrailer = () => {
     if (!anime?.trailer?.id || anime.trailer.site?.toLowerCase() !== 'youtube') {
-      toast.show('A trailer is not available for this title yet.', {
-        type: 'normal',
-        placement: 'bottom',
-      });
+      Alert.alert('Trailer unavailable', 'A trailer is not available for this title yet.');
       return;
     }
 
@@ -48,12 +43,6 @@ const HomeButtons = ({ anime }: HomeButtonsProps) => {
     } else {
       addAnime(anime);
     }
-
-    toast.show(isInLibrary ? 'Removed from My List' : 'Added to My List', {
-      type: 'success',
-      placement: 'bottom',
-      duration: 1800,
-    });
   };
 
   return (

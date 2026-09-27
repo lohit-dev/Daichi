@@ -24,18 +24,17 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useToast } from 'react-native-toast-notifications';
 
-import { useSettingsStore } from '~/app/_store/useSettingsStore';
+import { useSettingsStore } from '~/store/useSettingsStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 
 const Settings = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const toast = useToast();
   const provider = useSettingsStore((s) => s.provider);
   const setProvider = useSettingsStore((s) => s.setProvider);
 
@@ -46,15 +45,9 @@ const Settings = () => {
   const handleProviderToggle = async (useKitsu: boolean) => {
     const targetProvider = useKitsu ? 'kitsu' : 'anilist';
     setProvider(targetProvider);
-    toast.show(
-      targetProvider === 'kitsu'
-        ? 'Active provider set to Kitsu'
-        : 'Active provider set to AniList',
-      {
-        type: 'success',
-        placement: 'bottom',
-        duration: 2000,
-      }
+    Alert.alert(
+      'Provider changed',
+      targetProvider === 'kitsu' ? 'Active provider set to Kitsu' : 'Active provider set to AniList'
     );
     await queryClient.invalidateQueries();
   };

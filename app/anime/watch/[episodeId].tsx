@@ -9,7 +9,6 @@ import {
   Text,
   Image,
   ActivityIndicator,
-  InteractionManager,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +18,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import ReAnimated, {
+  CurvedTransition,
   interpolate,
   useAnimatedReaction,
   useAnimatedScrollHandler,
@@ -27,10 +27,10 @@ import ReAnimated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
+import Video, { SelectedTrackType, TextTrackType } from 'react-native-video';
 
-import { useHistoryStore } from '~/app/_store/useHistoryStore';
-import { usePlayerStore, RESIZE_MODES } from '~/app/_store/usePlayerStore';
+import { useHistoryStore } from '~/store/useHistoryStore';
+import { usePlayerStore, RESIZE_MODES } from '~/store/usePlayerStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import type { Episode } from '~/components/watch/EpisodeList';
 import { PLAYER_COLORS as COLORS } from '~/constants/Colors';
@@ -147,6 +147,7 @@ const WatchPlayerOverlay = ({
   onBack,
   controlsDockStyle,
 }: WatchPlayerOverlayProps) => {
+  const { width } = useWindowDimensions();
   const showControls = usePlayerStore((s) => s.showControls);
   const isFullscreen = usePlayerStore((s) => s.isFullscreen);
   const isLocked = usePlayerStore((s) => s.isLocked);
@@ -175,13 +176,14 @@ const WatchPlayerOverlay = ({
   const topCaptionOffset = showControls && !isLocked ? (isFullscreen ? 60 : 42) : 14;
   const resizeMode = RESIZE_MODES[resizeModeIndex];
 
-  const topBtnSize = isFullscreen ? 40 : 34;
-  const topIconSize = isFullscreen ? 18 : 15;
-  const playBtnSize = isFullscreen ? 78 : 58;
-  const playIconSize = isFullscreen ? 30 : 24;
-  const skipBtnSize = isFullscreen ? 52 : 34;
-  const skipIconSize = isFullscreen ? 22 : 15;
-  const controlsGap = isFullscreen ? 46 : 30;
+  const controlScale = isFullscreen ? 1 : Math.min(Math.max(width / 390, 0.92), 1.2);
+  const topBtnSize = isFullscreen ? 40 : Math.round(36 * controlScale);
+  const topIconSize = isFullscreen ? 18 : Math.round(17 * controlScale);
+  const playBtnSize = isFullscreen ? 78 : Math.round(66 * controlScale);
+  const playIconSize = isFullscreen ? 30 : Math.round(27 * controlScale);
+  const skipBtnSize = isFullscreen ? 52 : Math.round(42 * controlScale);
+  const skipIconSize = isFullscreen ? 22 : Math.round(18 * controlScale);
+  const controlsGap = isFullscreen ? 46 : Math.round(32 * controlScale);
   const scrubTrackHeight = isFullscreen ? 4 : 3;
   const scrubThumbSize = isScrubbing ? (isFullscreen ? 18 : 14) : isFullscreen ? 15 : 10;
   const timecodeFontSize = isFullscreen ? 13 : 10.5;
@@ -997,6 +999,7 @@ const WatchEpisodeList = ({
   onScroll,
   scrollEventThrottle,
   ListHeaderComponent,
+  onEpisodeListAnchor,
 }: {
   episodes: Episode[];
   currentEpisodeId: string;
@@ -1008,8 +1011,9 @@ const WatchEpisodeList = ({
   onScroll?: (...args: any[]) => void;
   scrollEventThrottle?: number;
   ListHeaderComponent?: ReactElement;
+  onEpisodeListAnchor?: (anchored: boolean) => void;
 }) => {
-  const listRef = useRef<any>(null);
+  const episodeListRef = useRef<any>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const displayEpisodes = useMemo(() => {
@@ -1020,16 +1024,15 @@ const WatchEpisodeList = ({
   }, [episodes, sortOrder]);
 
   const activeAscIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId);
+  const activeDisplayIndex =
+    sortOrder === 'desc' && activeAscIndex >= 0
+      ? episodes.length - 1 - activeAscIndex
+      : activeAscIndex;
 
   // Card geometry — fixed and known at compile time
   const CARD_H = 88;
   const SEPARATOR_H = 10;
   const CARD_STRIDE = CARD_H + SEPARATOR_H; // 98
-
-  // Stores the ACTUAL measured info-block height (variable — depends on title
-  // length, description, badges etc). Populated by the onLayout on that item.
-  const infoHeightRef = useRef(0);
-  const hasScrolledToActive = useRef(false);
 
   const toggleSortOrder = useCallback(() => {
     setSortOrder((prev) => {
@@ -1037,19 +1040,18 @@ const WatchEpisodeList = ({
       if (next === 'desc') {
         // Toggling to Ep 25–1: scroll to top so user sees the newest episodes (25, 24, 23...)
         requestAnimationFrame(() => {
-          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          episodeListRef.current?.scrollToOffset({ offset: 0, animated: true });
         });
       } else {
         // Toggling back to Ep 1–25: anchor to the active episode (e.g. 8, 9, 10...)
         const ascIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId);
         if (ascIndex > 0) {
           requestAnimationFrame(() => {
-            const targetH = infoHeightRef.current || 280;
-            const offset = targetH + ascIndex * CARD_STRIDE;
-            listRef.current?.scrollToOffset({ offset, animated: true });
+            const offset = ascIndex * CARD_STRIDE;
+            episodeListRef.current?.scrollToOffset({ offset, animated: true });
           });
         } else {
-          listRef.current?.scrollToOffset({ offset: 0, animated: true });
+          episodeListRef.current?.scrollToOffset({ offset: 0, animated: true });
         }
       }
       return next;
@@ -1057,72 +1059,26 @@ const WatchEpisodeList = ({
   }, [episodes, currentEpisodeId, CARD_STRIDE]);
 
   const scrollToTop = useCallback(() => {
-    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    episodeListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
-  // Computes the exact pixel offset that places the active episode directly
-  // below the sticky header.
-  const scrollToActiveEpisode = useCallback(
-    (infoH: number, indexToScroll = activeAscIndex) => {
-      if (indexToScroll <= 0) return;
-      const targetH = infoH > 0 ? infoH : infoHeightRef.current || 280;
-      const offset = targetH + indexToScroll * CARD_STRIDE;
-      requestAnimationFrame(() => {
-        listRef.current?.scrollToOffset({ offset, animated: false });
-      });
-    },
-    [activeAscIndex, CARD_STRIDE]
-  );
-
-  // On mount / active episode update in ascending mode, anchor to active episode
+  // Anchor the active episode inside the inner list only. The outer list
+  // stays at its current position so the player, title, and description are
+  // still visible when an episode is selected.
   useEffect(() => {
-    if (sortOrder !== 'asc') return;
-    if (activeAscIndex <= 0 || episodes.length === 0) return;
-    hasScrolledToActive.current = false;
-    const task = InteractionManager.runAfterInteractions(() => {
-      scrollToActiveEpisode(infoHeightRef.current, activeAscIndex);
+    if (activeDisplayIndex < 0 || displayEpisodes.length === 0) return;
+    onEpisodeListAnchor?.(activeDisplayIndex > 0);
+    const frame = requestAnimationFrame(() => {
+      episodeListRef.current?.scrollToIndex({
+        index: activeDisplayIndex,
+        animated: false,
+      });
     });
-    return () => task.cancel();
-  }, [activeAscIndex, currentEpisodeId, episodes.length, sortOrder, scrollToActiveEpisode]);
-
-  const listData = useMemo(
-    () => [
-      { type: 'info' as const, id: '__info__' },
-      { type: 'header' as const, id: '__header__' },
-      ...displayEpisodes.map((ep) => ({ type: 'episode' as const, ...ep })),
-    ],
-    [displayEpisodes]
-  );
+    return () => cancelAnimationFrame(frame);
+  }, [activeDisplayIndex, displayEpisodes.length, onEpisodeListAnchor]);
 
   const renderItem = useCallback(
-    ({ item }: { item: any }) => {
-      if (item.type === 'info') {
-        return (
-          <View
-            onLayout={(e) => {
-              const h = e.nativeEvent.layout.height;
-              if (h > 0) {
-                infoHeightRef.current = h;
-                if (!hasScrolledToActive.current && sortOrder === 'asc') {
-                  hasScrolledToActive.current = true;
-                  scrollToActiveEpisode(h, activeAscIndex);
-                }
-              }
-            }}>
-            {ListHeaderComponent || null}
-          </View>
-        );
-      }
-      if (item.type === 'header') {
-        return (
-          <EpisodesSectionHeader
-            count={episodes.length}
-            sortOrder={sortOrder}
-            onToggleSort={toggleSortOrder}
-            onScrollToTop={scrollToTop}
-          />
-        );
-      }
+    ({ item }: { item: Episode }) => {
       return (
         <WatchEpisodeCard
           item={item}
@@ -1132,52 +1088,52 @@ const WatchEpisodeList = ({
         />
       );
     },
-    [
-      ListHeaderComponent,
-      episodes.length,
-      sortOrder,
-      toggleSortOrder,
-      scrollToTop,
-      scrollToActiveEpisode,
-      activeAscIndex,
-      currentEpisodeId,
-      fallbackImage,
-      onSelectEpisode,
-    ]
+    [currentEpisodeId, fallbackImage, onSelectEpisode]
   );
 
-  // Never render every row before the active episode. On Android this used
-  // to mount hundreds of cards when opening episode 200+, blocking the JS
-  // thread and making the player feel stuck. The offset jump below works
-  // with virtualized rows, so the initial batch can stay small and stable.
-  const initialRenderCount = Math.min(10, listData.length);
-
   return (
-    <AnimatedFlatList
-      ref={listRef}
-      data={listData}
-      keyExtractor={(item: any) => item.id}
-      style={{ flex: 1 }}
-      stickyHeaderIndices={[1]}
-      onScroll={onScroll}
-      scrollEventThrottle={scrollEventThrottle}
-      contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: bottomPadding, paddingTop: 2 }}
-      ItemSeparatorComponent={({ leadingItem }: any) => {
-        if (leadingItem?.type === 'episode' || leadingItem?.type === 'header') {
-          return <View className="h-2.5" />;
-        }
-        return null;
-      }}
-      initialNumToRender={initialRenderCount}
-      maxToRenderPerBatch={8}
-      updateCellsBatchingPeriod={40}
-      windowSize={7}
-      removeClippedSubviews
-      keyboardShouldPersistTaps="handled"
-      renderItem={renderItem}
-      onEndReached={hasMoreImages ? onEndReached : undefined}
-      onEndReachedThreshold={0.6}
-    />
+    <View className="flex-1">
+      <View className="px-[14px] pt-2">
+        {ListHeaderComponent}
+        <EpisodesSectionHeader
+          count={episodes.length}
+          sortOrder={sortOrder}
+          onToggleSort={toggleSortOrder}
+          onScrollToTop={scrollToTop}
+        />
+      </View>
+      <AnimatedFlatList
+        ref={episodeListRef}
+        data={displayEpisodes}
+        extraData={currentEpisodeId}
+        keyExtractor={(item) => item.id}
+        style={{ flex: 1 }}
+        onScroll={onScroll}
+        scrollEventThrottle={scrollEventThrottle}
+        contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: bottomPadding }}
+        initialScrollIndex={activeDisplayIndex > 0 ? activeDisplayIndex : 0}
+        getItemLayout={(_, index) => ({
+          length: CARD_STRIDE,
+          offset: CARD_STRIDE * index,
+          index,
+        })}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={40}
+        windowSize={7}
+        removeClippedSubviews
+        renderItem={renderItem}
+        ItemSeparatorComponent={() => <View className="h-2.5" />}
+        onScrollToIndexFailed={(info) => {
+          episodeListRef.current?.scrollToOffset({
+            offset: info.index * CARD_STRIDE,
+            animated: false,
+          });
+        }}
+        onEndReached={hasMoreImages ? onEndReached : undefined}
+        onEndReachedThreshold={0.6}
+      />
+    </View>
   );
 };
 
@@ -1212,7 +1168,7 @@ const WatchDiscussionPlaceholder = () => (
 const WatchScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [activePanel, setActivePanel] = useState<'episodes' | 'chat'>('episodes');
 
   // Panel switch (Episodes ↔ Chat) and the player "docking" transition both
@@ -1250,19 +1206,39 @@ const WatchScreen = () => {
   const SNAP_AT = 30; // px of scroll before spring fires
   const SNAP_RANGE = 64; // scroll range for phase-1 interpolation
   const MARGIN_START = 14; // collapsed (portrait, top of list)
+  const playerContentWidth = Math.max(screenWidth - MARGIN_START * 2, 1);
+  const playerHeight = Math.min(
+    Math.round(playerContentWidth * (9 / 16)),
+    Math.round(screenHeight * 0.42)
+  );
 
   // isFullscreenShared must be declared BEFORE useAnimatedReaction so the
   // worklet closure captures the correct reference.
   const isFullscreen = usePlayerStore((s) => s.isFullscreen);
   const isFullscreenShared = useSharedValue(isFullscreen);
+  const fullscreenProgress = useSharedValue(isFullscreen ? 1 : 0);
   useEffect(() => {
     isFullscreenShared.value = isFullscreen;
-  }, [isFullscreen, isFullscreenShared]);
+    fullscreenProgress.value = withSpring(isFullscreen ? 1 : 0, {
+      stiffness: 220,
+      damping: 26,
+      mass: 0.7,
+    });
+  }, [isFullscreen, isFullscreenShared, fullscreenProgress]);
 
   // Tracks whether the spring has already fired so we don't re-trigger it
   const hasSnapped = useSharedValue(false);
   // The animated margin value — starts at MARGIN_START, ends at 0
   const dockMargin = useSharedValue(MARGIN_START);
+
+  const handleEpisodeListAnchor = useCallback(
+    (anchored: boolean) => {
+      // Programmatic anchoring does not always emit a native scroll event.
+      // Keep the player docking state in sync with the inner list anyway.
+      scrollY.value = anchored ? SNAP_AT : 0;
+    },
+    [SNAP_AT, scrollY]
+  );
 
   // Worklet that reacts to scrollY changes and drives dockMargin
   useAnimatedReaction(
@@ -1301,18 +1277,16 @@ const WatchScreen = () => {
   // Outer wrapper gets paddingHorizontal — the player fills flex:1 inside.
   // No layout pass on the video surface itself.
   const playerDockStyle = useAnimatedStyle(() => {
-    if (isFullscreenShared.value) {
-      return { paddingHorizontal: 0 };
-    }
-    return { paddingHorizontal: dockMargin.value };
+    return {
+      paddingHorizontal: dockMargin.value * (1 - fullscreenProgress.value),
+    };
   });
 
   // borderRadius on the inner player view, still scroll-driven (no layout cost
   // on border changes in Reanimated 4 — driven by the compositor).
   const playerRadiusStyle = useAnimatedStyle(() => {
-    if (isFullscreenShared.value) return { borderRadius: 0 };
     // Mirror the margin: at margin=14 → radius=22, at margin=0 → radius=0
-    const radius = (dockMargin.value / MARGIN_START) * 22;
+    const radius = (dockMargin.value / MARGIN_START) * 22 * (1 - fullscreenProgress.value);
     return { borderRadius: radius };
   });
 
@@ -1320,8 +1294,9 @@ const WatchScreen = () => {
   // outer padding is `dockMargin` (14 -> 0), overlay margin is `14 - dockMargin` (0 -> 14).
   // dockMargin + (14 - dockMargin) = 14px CONSTANT at every frame!
   const controlsDockStyle = useAnimatedStyle(() => {
-    if (isFullscreenShared.value) return { marginHorizontal: 0 };
-    return { marginHorizontal: MARGIN_START - dockMargin.value };
+    return {
+      marginHorizontal: (MARGIN_START - dockMargin.value) * (1 - fullscreenProgress.value),
+    };
   });
 
   const panelTrackStyle = useAnimatedStyle(() => ({
@@ -1361,12 +1336,21 @@ const WatchScreen = () => {
     episodeThumbnail?: string;
   }>();
 
+  // Episode changes stay inside this mounted watch screen. The route param is
+  // only the initial deep-link value; selecting another row updates local
+  // state so the player/list transition does not look like a new screen.
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(episodeId);
+  useEffect(() => {
+    setSelectedEpisodeId(episodeId);
+  }, [episodeId]);
+  const currentEpisodeId = selectedEpisodeId || episodeId;
+
   useEffect(() => {
     usePlayerStore.getState().reset();
     scrollY.value = 0;
 
     const historyItem = useHistoryStore.getState().history[animeId];
-    if (historyItem && historyItem.episodeId === episodeId && historyItem.progress > 0) {
+    if (historyItem && historyItem.episodeId === currentEpisodeId && historyItem.progress > 0) {
       usePlayerStore.getState().setPendingSeek(historyItem.progress);
     }
 
@@ -1374,7 +1358,7 @@ const WatchScreen = () => {
       usePlayerStore.getState().setIsPlaying(false);
       usePlayerStore.getState().reset();
     };
-  }, [animeId, episodeId, scrollY]);
+  }, [animeId, currentEpisodeId, scrollY]);
 
   // -----------------------------------------------------------------------
   // Hooks
@@ -1391,18 +1375,18 @@ const WatchScreen = () => {
   const bottomDockSpace = insets.bottom + 120;
 
   const historyItem = useHistoryStore((s) => s.history[animeId]);
-  const matchingHistory = historyItem?.episodeId === episodeId ? historyItem : undefined;
+  const matchingHistory = historyItem?.episodeId === currentEpisodeId ? historyItem : undefined;
 
   const currentEpisode = useMemo(
-    () => episodes.find((episode) => episode.id === episodeId),
-    [episodes, episodeId]
+    () => episodes.find((episode) => episode.id === currentEpisodeId),
+    [episodes, currentEpisodeId]
   );
 
   const activeEpisodeTitle =
     currentEpisode?.title ||
     paramEpisodeTitle ||
     matchingHistory?.episodeTitle ||
-    `Episode ${currentEpisode?.number ?? episodeId}`;
+    `Episode ${currentEpisode?.number ?? currentEpisodeId}`;
 
   const activeEpisodeDescription =
     currentEpisode?.description || paramEpisodeDescription || matchingHistory?.episodeDescription;
@@ -1444,7 +1428,24 @@ const WatchScreen = () => {
     handleVideoTracks,
     handleEnd,
     seekTo,
-  } = useVideoPlayer(animeId, episodeId, type, animeSlug, playerMetadata);
+  } = useVideoPlayer(animeId, currentEpisodeId, type, animeSlug, playerMetadata);
+
+  // Keep the previous playable source mounted while the next episode's
+  // stream request resolves. This prevents episode changes from replacing the
+  // entire watch screen with a black loading page.
+  const previousVideoRef = useRef<{
+    key: string;
+    source: typeof videoSourceObj;
+  } | null>(null);
+  useEffect(() => {
+    if (videoSource) {
+      previousVideoRef.current = { key: videoSourceKey, source: videoSourceObj };
+    }
+  }, [videoSource, videoSourceKey, videoSourceObj]);
+  const renderVideoSource = videoSource ? videoSourceObj : previousVideoRef.current?.source;
+  const renderVideoSourceKey = videoSource
+    ? videoSourceKey
+    : previousVideoRef.current?.key || 'initial-video';
 
   const handleExit = useCallback(() => {
     if (router.canGoBack()) {
@@ -1497,20 +1498,38 @@ const WatchScreen = () => {
     [currentTime, subtitleCues]
   );
 
+  const nativeTextTracks = useMemo(
+    () =>
+      validSubtitleTracks.map((track, index) => ({
+        title: track.title || `Subtitle ${index + 1}`,
+        language: 'en' as const,
+        type: track.uri.toLowerCase().includes('.srt') ? TextTrackType.SUBRIP : TextTrackType.VTT,
+        uri: track.uri,
+      })),
+    [validSubtitleTracks]
+  );
+  const nativeSelectedTextTrack = useMemo(
+    () =>
+      isPiP && selectedSubtitleIndex !== null
+        ? { type: SelectedTrackType.INDEX, value: selectedSubtitleIndex }
+        : { type: SelectedTrackType.DISABLED },
+    [isPiP, selectedSubtitleIndex]
+  );
+
   // -----------------------------------------------------------------------
   // Episode helpers
   // -----------------------------------------------------------------------
 
   const nextEpisode = useMemo(() => {
-    const currentIndex = episodes.findIndex((ep: { id: string }) => ep.id === episodeId);
+    const currentIndex = episodes.findIndex((ep: { id: string }) => ep.id === currentEpisodeId);
     if (currentIndex === -1) return null;
     return episodes[currentIndex + 1] ?? null;
-  }, [episodes, episodeId]);
+  }, [episodes, currentEpisodeId]);
 
   const pendingEpisodeNavigationRef = useRef<string | null>(null);
   useEffect(() => {
     pendingEpisodeNavigationRef.current = null;
-  }, [episodeId]);
+  }, [currentEpisodeId]);
 
   const goToEpisode = useCallback(
     (
@@ -1523,26 +1542,17 @@ const WatchScreen = () => {
         number?: string | number;
       } | null
     ) => {
-      if (!target || target.id === episodeId || pendingEpisodeNavigationRef.current === target.id) {
+      if (
+        !target ||
+        target.id === currentEpisodeId ||
+        pendingEpisodeNavigationRef.current === target.id
+      ) {
         return;
       }
       pendingEpisodeNavigationRef.current = target.id;
-      router.replace({
-        pathname: '/anime/watch/[episodeId]',
-        params: {
-          episodeId: target.id,
-          animeId,
-          animeSlug: target.animeSlug || animeSlug,
-          type,
-          animeTitle,
-          animeImage,
-          episodeTitle: target.title,
-          episodeDescription: target.description,
-          episodeThumbnail: target.image,
-        },
-      });
+      setSelectedEpisodeId(target.id);
     },
-    [router, animeId, animeSlug, type, animeTitle, animeImage, episodeId]
+    [currentEpisodeId]
   );
 
   const handleVideoEnd = useCallback(() => {
@@ -1566,17 +1576,17 @@ const WatchScreen = () => {
     if (
       second <= 0 ||
       !animeImage ||
-      (previous?.episodeId === episodeId && second - previous.second < 5)
+      (previous?.episodeId === currentEpisodeId && second - previous.second < 5)
     )
       return;
-    lastSavedProgressRef.current = { episodeId, second };
+    lastSavedProgressRef.current = { episodeId: currentEpisodeId, second };
     saveProgress({
       animeId,
       animeSlug,
       animeTitle: animeTitle || formatIdToTitle(animeId),
       animeImage,
-      episodeId,
-      episodeNumber: currentEpisode?.number ? String(currentEpisode.number) : episodeId,
+      episodeId: currentEpisodeId,
+      episodeNumber: currentEpisode?.number ? String(currentEpisode.number) : currentEpisodeId,
       episodeTitle: activeEpisodeTitle,
       episodeDescription: activeEpisodeDescription,
       episodeThumbnail: activeEpisodeThumbnail || undefined,
@@ -1593,7 +1603,7 @@ const WatchScreen = () => {
     activeEpisodeDescription,
     currentEpisode?.number,
     currentTime,
-    episodeId,
+    currentEpisodeId,
     saveProgress,
   ]);
 
@@ -1604,13 +1614,13 @@ const WatchScreen = () => {
   const handleShare = useCallback(async () => {
     try {
       await Share.share({
-        message: `Watching "${animeTitle || formatIdToTitle(animeId)}" — Episode ${currentEpisode?.number ?? episodeId} on Daichi`,
+        message: `Watching "${animeTitle || formatIdToTitle(animeId)}" — Episode ${currentEpisode?.number ?? currentEpisodeId} on Daichi`,
         title: animeTitle || formatIdToTitle(animeId),
       });
     } catch {
       // user dismissed
     }
-  }, [animeTitle, animeId, currentEpisode, episodeId]);
+  }, [animeTitle, animeId, currentEpisode, currentEpisodeId]);
 
   const handleDownload = useCallback(() => {
     Alert.alert('Download', 'Download functionality coming soon!', [{ text: 'OK' }]);
@@ -1645,7 +1655,7 @@ const WatchScreen = () => {
     return undefined;
   }, [handleExit, isLoading, videoSource]);
 
-  if (isLoading || !videoSource) {
+  if ((isLoading || !videoSource) && !renderVideoSource) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: COLORS.bg }}>
         <ActivityIndicator size="large" color={COLORS.accent} />
@@ -1669,7 +1679,6 @@ const WatchScreen = () => {
     selectedSubtitleIndex !== null ? validSubtitleTracks[selectedSubtitleIndex] : undefined;
   const activeServerName = servers[activeServerIndex]?.serverName;
   const qualityLabel = selectedQualityHeight === 0 ? 'Auto' : `${selectedQualityHeight}p`;
-
   // -----------------------------------------------------------------------
   // The info block scrolls WITH the episode list (passed in as its
   // ListHeaderComponent) instead of sitting pinned above it, so the whole
@@ -1765,6 +1774,8 @@ const WatchScreen = () => {
 
       {activeEpisodeDescription ? (
         <Text
+          numberOfLines={3}
+          ellipsizeMode="tail"
           className="mt-3 text-[13px] leading-[19px]"
           style={{ color: 'rgba(255,255,255,0.68)' }}>
           {getFormattedTitle(activeEpisodeDescription, undefined, true)}
@@ -1792,7 +1803,7 @@ const WatchScreen = () => {
           isFullscreen
             ? [StyleSheet.absoluteFill, { zIndex: 1000, padding: 0 }]
             : {
-                height: 219,
+                height: playerHeight,
                 marginTop: insets.top + 8,
               },
           playerDockStyle,
@@ -1805,10 +1816,10 @@ const WatchScreen = () => {
             playerWidthRef.current = e.nativeEvent.layout.width;
           }}>
           <Video
-            key={videoSourceKey}
+            key={renderVideoSourceKey}
             ref={videoRef}
             controls={false}
-            source={videoSourceObj}
+            source={renderVideoSource}
             style={{ width: '100%', height: '100%' }}
             paused={!isPlaying || !isSubtitleReady}
             muted={isMuted}
@@ -1817,6 +1828,8 @@ const WatchScreen = () => {
             showNotificationControls
             preventsDisplaySleepDuringVideoPlayback
             enterPictureInPictureOnLeave
+            textTracks={nativeTextTracks}
+            selectedTextTrack={nativeSelectedTextTrack}
             onPictureInPictureStatusChanged={(e) => setIsPiP(e.isActive)}
             onProgress={handleProgress}
             onEnd={handleVideoEnd}
@@ -1828,6 +1841,12 @@ const WatchScreen = () => {
             resizeMode={resizeMode.key}
             ignoreSilentSwitch="ignore"
           />
+          {(isLoading || !videoSource) && (
+            <View className="absolute inset-0 items-center justify-center bg-black/35">
+              <ActivityIndicator size="small" color={COLORS.accent} />
+              <Text className="mt-2 text-[12px] font-semibold text-white/75">Loading episode…</Text>
+            </View>
+          )}
           <Pressable className="absolute inset-0" onPress={handleVideoTap} />
           <WatchPlayerOverlay
             controlsAnim={controlsAnim}
@@ -1864,7 +1883,7 @@ const WatchScreen = () => {
           <ReAnimated.View className="flex-1" style={[{ width: screenWidth }, panel1Style]}>
             <WatchEpisodeList
               episodes={episodes}
-              currentEpisodeId={episodeId}
+              currentEpisodeId={currentEpisodeId}
               fallbackImage={animeImage}
               bottomPadding={bottomDockSpace}
               onSelectEpisode={(ep) => goToEpisode(ep)}
@@ -1873,6 +1892,7 @@ const WatchScreen = () => {
               onScroll={handleContentScroll}
               scrollEventThrottle={16}
               ListHeaderComponent={infoHeader}
+              onEpisodeListAnchor={handleEpisodeListAnchor}
             />
           </ReAnimated.View>
 

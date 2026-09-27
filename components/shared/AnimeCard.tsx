@@ -1,15 +1,14 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Star1 } from 'iconsax-react-native';
 import React from 'react';
-import { ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import ScalePressable from './ScalePressable';
 
 import { hp, wp } from '~/helpers/common';
 import { Anime } from '~/types';
-
-const AnimatedImageBackground = Animated.createAnimatedComponent(ImageBackground);
 
 const MAX_STAGGER_ITEMS = 6;
 const STAGGER_DELAY_MS = 80;
@@ -56,9 +55,14 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
           onPress={handleNavigation}
           scaleTo={0.92}>
           <View className="overflow-hidden rounded-2xl">
-            <AnimatedImageBackground
-              source={{ uri: item.image }}
+            <Animated.View
               style={[styles.image, width ? { width, height: width * IMAGE_ASPECT_RATIO } : null]}>
+              <Image
+                source={{ uri: item.image }}
+                contentFit="cover"
+                transition={120}
+                style={StyleSheet.absoluteFill}
+              />
               {detailsEnabled && (
                 <View className="flex-1 items-end justify-start p-2">
                   <View className="flex-row items-center justify-center rounded-full bg-lime-200 px-2 py-[2px]">
@@ -77,7 +81,7 @@ const AnimeCard: React.FC<AnimeCardProps> = React.memo(
                   </View>
                 </View>
               )}
-            </AnimatedImageBackground>
+            </Animated.View>
           </View>
         </ScalePressable>
       </Animated.View>

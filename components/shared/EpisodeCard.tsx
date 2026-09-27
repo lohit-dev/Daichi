@@ -1,5 +1,6 @@
+import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
-import { Animated, Image, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Animated, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import ScalePressable from './ScalePressable';
 
@@ -104,7 +105,7 @@ export const EpisodeCard = ({
       {/* Left: Thumbnail with EP badge */}
       <View style={styles.thumbWrap}>
         {thumb ? (
-          <Image source={{ uri: thumb }} style={styles.thumb} />
+          <Image source={{ uri: thumb }} contentFit="cover" transition={120} style={styles.thumb} />
         ) : (
           <View style={styles.placeholderThumb}>
             <Text style={styles.placeholderText}>{item.number}</Text>

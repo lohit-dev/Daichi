@@ -21,7 +21,7 @@ type CharacterVoiceActorRowProps = {
 
 type RoundedRowItemProps = { item: CharacterVoiceActor };
 
-const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
+const RoundedRowItem = React.memo(({ item }: RoundedRowItemProps) => {
   const router = useRouter();
 
   if (!item?.image) return null;
@@ -95,7 +95,7 @@ const RoundedRowItem = ({ item }: RoundedRowItemProps) => {
       ) : null}
     </Animated.View>
   );
-};
+});
 
 export const CharacterVoiceActorRow = ({
   className,

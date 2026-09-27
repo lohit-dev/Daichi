@@ -1,9 +1,10 @@
+import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useMemo } from 'react';
-import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useSavedAnimesStore } from '~/app/_store/useSavedAnimesStore';
+import { useSavedAnimesStore } from '~/store/useSavedAnimesStore';
 import AnimeCard from '~/components/shared/AnimeCard';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 
@@ -37,19 +38,15 @@ const MyList = () => {
           className="h-72 w-full rounded-full"
         />
       </View>
-      <FlatList
+      <FlashList
         style={{ flex: 1 }}
         data={libraryAnimes}
         numColumns={3}
         keyExtractor={(item) => item.slug}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110, paddingHorizontal: 16 }}
-        columnWrapperStyle={{ justifyContent: 'flex-start' }}
         removeClippedSubviews
-        initialNumToRender={9}
-        maxToRenderPerBatch={9}
-        windowSize={7}
-        updateCellsBatchingPeriod={40}
+        drawDistance={500}
         ListHeaderComponent={
           <View className="mt-16 items-center px-6 pt-8">
             <Text className="pt-6 font-salsa text-5xl text-white">

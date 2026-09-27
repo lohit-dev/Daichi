@@ -1,6 +1,7 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
 
 import ScalePressable from '~/components/shared/ScalePressable';
 import { CastWork } from '~/types';
@@ -10,7 +11,7 @@ type CastWorkCardProps = {
   compact?: boolean;
 };
 
-const CastWorkCard = ({ work, compact = true }: CastWorkCardProps) => {
+const CastWorkCard = React.memo(({ work, compact = true }: CastWorkCardProps) => {
   const router = useRouter();
 
   return (
@@ -18,7 +19,12 @@ const CastWorkCard = ({ work, compact = true }: CastWorkCardProps) => {
       scaleTo={0.95}
       style={[styles.card, compact ? styles.compactCard : styles.gridCard]}
       onPress={() => router.push({ pathname: '/anime/[id]', params: { id: work.id } })}>
-      <Animated.Image source={{ uri: work.image }} style={styles.image} />
+      <Image
+        source={{ uri: work.image }}
+        contentFit="cover"
+        transition={120}
+        style={styles.image}
+      />
       <View style={styles.scrim} />
       <View style={styles.cardCopy}>
         <Text style={styles.title} numberOfLines={2}>
@@ -32,7 +38,7 @@ const CastWorkCard = ({ work, compact = true }: CastWorkCardProps) => {
       </View>
     </ScalePressable>
   );
-};
+});
 
 export default CastWorkCard;
 

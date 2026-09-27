@@ -3,9 +3,17 @@ import { File, Paths } from 'expo-file-system';
 import { Asset, requestPermissionsAsync } from 'expo-media-library';
 import * as LegacyMediaLibrary from 'expo-media-library/legacy';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { useToast } from 'react-native-toast-notifications';
 
 import ScalePressable from '~/components/shared/ScalePressable';
 import { hp, wp } from '~/helpers/common';
@@ -24,7 +32,6 @@ type ImagePreviewModalProps = {
 // Component
 // ---------------------------------------------------------------------------
 const ImagePreviewModal = ({ visible, imageUrl, title, onClose }: ImagePreviewModalProps) => {
-  const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   const [shouldRender, setShouldRender] = useState(visible);
 
@@ -68,7 +75,7 @@ const ImagePreviewModal = ({ visible, imageUrl, title, onClose }: ImagePreviewMo
     try {
       const { status } = await requestPermissionsAsync();
       if (status !== 'granted') {
-        toast.show('Permission to access photos was denied', { type: 'danger' });
+        Alert.alert('Permission needed', 'Permission to access photos was denied.');
         return;
       }
 
@@ -82,10 +89,10 @@ const ImagePreviewModal = ({ visible, imageUrl, title, onClose }: ImagePreviewMo
         await LegacyMediaLibrary.saveToLibraryAsync(downloaded.uri);
       }
 
-      toast.show('Poster saved to Photos', { type: 'success' });
+      Alert.alert('Saved', 'Poster saved to Photos.');
     } catch (e) {
       console.error(e);
-      toast.show('Could not save poster', { type: 'danger' });
+      Alert.alert('Save failed', 'Could not save poster.');
     } finally {
       setIsDownloading(false);
     }

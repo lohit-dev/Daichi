@@ -1,7 +1,8 @@
+import { FlashList } from '@shopify/flash-list';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft2 } from 'iconsax-react-native';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CastWorkCard from '~/components/details/CastWorkCard';
@@ -43,16 +44,16 @@ export default function CastWorksScreen() {
         <View className="w-10" />
       </View>
 
-      <FlatList
+      <FlashList
         data={data?.works ?? []}
         keyExtractor={(work) => work.id}
         numColumns={3}
         renderItem={({ item }) => <CastWorkCard work={item} compact={false} />}
-        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.content}
         ListHeaderComponent={<Text style={styles.subtitle}>{data?.name || 'Cast member'}</Text>}
         ListEmptyComponent={<Text className="mt-8 text-center text-white/50">No works found.</Text>}
         showsVerticalScrollIndicator={false}
+        drawDistance={600}
       />
     </SafeAreaView>
   );
@@ -66,5 +67,4 @@ const styles = StyleSheet.create({
   title: { color: '#fff', fontFamily: 'Salsa-Regular', fontSize: 22 },
   content: { padding: 14, paddingBottom: 110 },
   subtitle: { color: '#a3e635', fontSize: 15, marginBottom: 14 },
-  row: { gap: 10 },
 });

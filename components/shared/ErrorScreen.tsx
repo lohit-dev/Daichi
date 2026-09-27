@@ -2,12 +2,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowSwapHorizontal, Refresh2 } from 'iconsax-react-native';
 import LottieView from 'lottie-react-native';
 import React from 'react';
-import { Text, View } from 'react-native';
-import { useToast } from 'react-native-toast-notifications';
+import { Alert, Text, View } from 'react-native';
 
 import ScalePressable from './ScalePressable';
 
-import { useSettingsStore } from '~/app/_store/useSettingsStore';
+import { useSettingsStore } from '~/store/useSettingsStore';
 import { hp, wp } from '~/helpers/common';
 
 type ErrorScreenProps = {
@@ -22,7 +21,6 @@ export default function ErrorScreen({
   showSwitchProvider = true,
 }: ErrorScreenProps) {
   const queryClient = useQueryClient();
-  const toast = useToast();
   const provider = useSettingsStore((s) => s.provider);
   const setProvider = useSettingsStore((s) => s.setProvider);
 
@@ -30,15 +28,11 @@ export default function ErrorScreen({
     const targetProvider = provider === 'kitsu' ? 'anilist' : 'kitsu';
     setProvider(targetProvider);
 
-    toast?.show(
+    Alert.alert(
+      'Provider changed',
       targetProvider === 'kitsu'
         ? 'Switched to Kitsu API as default source'
-        : 'Switched to AniList API',
-      {
-        type: 'success',
-        placement: 'bottom',
-        duration: 2500,
-      }
+        : 'Switched to AniList API'
     );
 
     // Invalidate queries so that the current screen and app re-fetch with new provider

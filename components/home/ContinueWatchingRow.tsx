@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { CloseCircle } from 'iconsax-react-native';
-import { useMemo } from 'react';
-import { FlatList, ImageBackground, StyleSheet, Text, View } from 'react-native';
+import { memo, useMemo } from 'react';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 
-import { useHistoryStore, HistoryItem } from '~/app/_store/useHistoryStore';
 import ScalePressable from '~/components/shared/ScalePressable';
 import { getFormattedTitle } from '~/helpers/TextFormat';
 import { formatTime, wp } from '~/helpers/common';
 import { getEpisodeNumberKey } from '~/helpers/episodeNumbers';
 import { fetchAniListStreamingEpisodeImages } from '~/services/AniListService';
+import { useHistoryStore, HistoryItem } from '~/store/useHistoryStore';
 
 const CARD_WIDTH = wp(50);
 const CARD_HEIGHT = CARD_WIDTH * (10 / 16);
@@ -21,7 +22,7 @@ type CardProps = {
   onRemove: (animeId: string) => void;
 };
 
-const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
+const ContinueWatchingCard = memo(({ item, index, onRemove }: CardProps) => {
   const { data: episodeImages } = useQuery({
     queryKey: ['anilist', 'streaming-episode-images-v2', item.animeId],
     queryFn: () => fetchAniListStreamingEpisodeImages(item.animeId),
@@ -71,10 +72,13 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
       entering={FadeInRight.delay(index * 70).duration(380)}
       style={styles.cardWrapper}>
       <ScalePressable onPress={handlePress} scaleTo={0.96}>
-        <ImageBackground
-          source={{ uri: thumbnail }}
-          style={styles.thumb}
-          imageStyle={styles.thumbImage}>
+        <View style={styles.thumb}>
+          <Image
+            source={{ uri: thumbnail }}
+            contentFit="cover"
+            transition={120}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={styles.scrim} />
 
           {/* Remove button */}
@@ -102,7 +106,7 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: progressPercent }]} />
           </View>
-        </ImageBackground>
+        </View>
 
         <Text style={styles.cardTitle} numberOfLines={1}>
           {item.animeTitle}
@@ -110,7 +114,7 @@ const ContinueWatchingCard = ({ item, index, onRemove }: CardProps) => {
       </ScalePressable>
     </Animated.View>
   );
-};
+});
 
 const ContinueWatchingRow = () => {
   const history = useHistoryStore((s) => s.history);
@@ -156,7 +160,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     justifyContent: 'space-between',
   },
-  thumbImage: { borderRadius: 10, resizeMode: 'cover' },
   scrim: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.22)',
