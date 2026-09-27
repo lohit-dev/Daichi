@@ -79,23 +79,47 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: >-
-          ./gradlew :app:assembleRelease
-          --no-daemon
-          --no-parallel
-          --max-workers=2
-          --stacktrace
-          "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8"
-          -PreactNativeArchitectures=arm64-v8a
-          -Pandroid.enableMinifyInReleaseBuilds=true
-          -Pandroid.enableShrinkResourcesInReleaseBuilds=true
-          -Pandroid.enableBundleCompression=true
+        run: |
+          set -euo pipefail
+
+          app_version="$(node -p "require('../app.json').expo.version")"
+          release_dir="app/build/outputs/apk/release"
+
+          # One minified release build. The Expo config plugin adds ABI splits,
+          # so R8 runs once while Gradle emits all requested APK variants.
+          ./gradlew :app:assembleRelease \
+            --no-daemon \
+            --no-parallel \
+            --max-workers=2 \
+            --stacktrace \
+            "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=2g -Dfile.encoding=UTF-8" \
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64 \
+            -Pandroid.enableMinifyInReleaseBuilds=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
+            -Pandroid.enableBundleCompression=true
+
+          copy_variant() {
+            local pattern="$1"
+            local label="$2"
+            local source
+            source="$(find "${release_dir}" -maxdepth 1 -type f -name "*${pattern}*release*.apk" -print -quit)"
+            if [[ -z "${source}" ]]; then
+              echo "Could not find APK variant matching: ${pattern}" >&2
+              find "${release_dir}" -maxdepth 1 -type f -name '*.apk' -print >&2
+              exit 1
+            fi
+            cp "${source}" "${release_dir}/Daichi-v${app_version}-${label}.apk"
+          }
+
+          copy_variant "arm64-v8a" "arm64-v8a"
+          copy_variant "armeabi-v7a" "armeabi-v7a"
+          copy_variant "universal" "universal"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: daichi-release-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: daichi-release-apks
+          path: android/app/build/outputs/apk/release/Daichi-v*.apk
           if-no-files-found: error
           retention-days: 14
 
@@ -103,4 +127,4 @@ jobs:
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/release/app-release.apk
+          files: android/app/build/outputs/apk/release/Daichi-v*.apk

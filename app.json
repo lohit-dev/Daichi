@@ -11,6 +11,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withAbiSplits",
       [
         "expo-build-properties",
         {
